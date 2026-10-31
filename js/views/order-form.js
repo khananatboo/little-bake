@@ -23,7 +23,7 @@
       kind: existing ? existing.kind : (query.kind || (openRounds.length ? 'deposit' : 'ready')),
       round_id: existing ? existing.round_id : (query.round || (openRounds[0] && openRounds[0].id) || ''),
       customer_name: existing ? existing.customer_name : '',
-      channel: existing ? existing.channel : 'facebook',
+      channel: existing ? existing.channel : 'direct',
       phone: existing ? existing.phone : '',
       handover: existing ? existing.handover : 'pickup',
       due_date: existing ? existing.due_date : '',

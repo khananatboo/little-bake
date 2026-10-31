@@ -10,7 +10,7 @@
       <section class="stack"><h3>ลดราคา</h3>
         <div class="row"><input class="input grow" type="text" inputmode="decimal" data-price value="${esc(LB.n(b.discount_price) || '')}" placeholder="ราคาเต็ม ${LB.money(x.price)}" aria-label="ราคาลด">
         <button type="button" class="btn" data-a="discount">บันทึก</button></div>
-        <span class="hint">ใช้ราคานี้ตอนขายหน้างานและจองของพร้อมขาย เว้นว่างเพื่อกลับเป็นราคาเต็ม</span></section>
+        <span class="hint">ใช้ราคานี้ตอนขายหน้าร้านและจองของพร้อมขาย เว้นว่างเพื่อกลับเป็นราคาเต็ม</span></section>
       <section class="stack"><h3>บันทึกทิ้ง</h3>
         <div class="row">${LB.stepper('waste', b.remaining, 1, b.remaining, ' ที่ทิ้ง')}<button type="button" class="btn danger" data-a="waste">ทิ้ง</button></div></section>
       <section class="stack"><h3>ปรับยอดให้ตรงของจริง</h3>

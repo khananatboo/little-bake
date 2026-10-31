@@ -29,6 +29,14 @@
     return lines.join('\n');
   };
 
+  /** เลข PromptPay แบบอ่านง่าย: 081-234-5678 หรือ 1-2345-67890-12-3 */
+  LB.formatPromptPay = (id) => {
+    const d = String(id || '').replace(/\D/g, '');
+    if (d.length === 10) return `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}`;
+    if (d.length === 13) return `${d[0]}-${d.slice(1, 5)}-${d.slice(5, 10)}-${d.slice(10, 12)}-${d[12]}`;
+    return d;
+  };
+
   LB.msgOrder = (o) => {
     const s = settings();
     const p = particle();
@@ -42,7 +50,14 @@
       lines.push(`มัดจำ ${s.deposit_percent || 50}% = ${LB.money(o.deposit_due)} บาท ${o.depositPaid ? '(ได้รับแล้ว)' : '(รอโอน)'}`);
     }
     if (o.paid > 0 && o.kind !== 'deposit') lines.push(`ชำระแล้ว ${LB.money(o.paid)} บาท`);
-    lines.push(o.balance > 0 ? `ชำระวันรับ ${LB.money(o.balance)} บาท` : 'ชำระครบแล้ว');
+    if (LB.n(o.tip) > 0) lines.push(`ทิป ${LB.money(o.tip)} บาท`);
+    // มัดจำที่ยังไม่โอนแสดงในบรรทัดมัดจำแล้ว วันรับจ่ายเฉพาะส่วนที่เหลือ
+    const depositLeft = o.kind === 'deposit' ? Math.max(0, LB.n(o.deposit_due) - LB.n(o.paid)) : 0;
+    const atPickup = Math.max(0, LB.n(o.balance) - depositLeft);
+    if (LB.n(o.balance) <= 0) lines.push('ชำระครบแล้ว');
+    else if (atPickup > 0) lines.push(`ชำระวันรับ ${LB.money(atPickup)} บาท`);
+    const pp = LB.formatPromptPay(s.promptpay_id);
+    if (pp && (o.balance > 0 || (o.kind === 'deposit' && !o.depositPaid))) lines.push(`PromptPay ${pp}`);
     lines.push(`${LB.L.handover[o.handover]} ${LB.dateTh(o.due_date)}${o.due_time ? ' ' + o.due_time + ' น.' : ''}`);
     if (o.kind !== 'ready') {
       lines.push('');
@@ -271,6 +286,24 @@
       <p class="hint" style="margin:0">แชร์ไปที่ Facebook หรือ IG Story แล้ววางข้อความประกาศในโพสต์ได้เลย</p>`;
     s.el.querySelector('[data-copy]').onclick = () => LB.copyText(LB.msgRound(round));
     s.el.querySelector('[data-share]').onclick = () => LB.shareCanvas(cv, `little-bake-${round.bake_date}.png`, 'ประกาศรอบผลิต');
+  };
+
+  /** QR รับเงินขายหน้าร้าน: ยังไม่บันทึกการขายจนกว่าผู้ขายกด "ได้รับเงินแล้ว" */
+  LB.openSaleQr = (amount, customerName, onReceived) => {
+    const s = settings();
+    if (!String(s.promptpay_id || '').replace(/\D/g, '')) {
+      LB.sheet('ยังไม่ได้ตั้ง PromptPay', `<p style="margin:0">ใส่ PromptPay ID (เบอร์โทรหรือเลข 13 หลัก) ในหน้าตั้งค่าร้านก่อน</p>
+        <a class="btn primary" href="#/settings" data-close>ไปหน้าตั้งค่าร้าน</a>`);
+      return;
+    }
+    const sh = LB.sheet('QR รับเงิน ขายหน้าร้าน', `<div class="qr-box" data-qr>${LB.loadingHtml}</div>
+      <p class="hint" style="margin:0;text-align:center">ให้ลูกค้าสแกนจ่าย ${LB.esc(LB.baht(amount))}
+      แล้วตรวจเงินเข้าในแอปธนาคารก่อนกดบันทึก</p>
+      <button type="button" class="btn primary" data-received>ได้รับเงินแล้ว บันทึกการขาย</button>`);
+    LB.drawPayQr({ id: 'ขายหน้าร้าน', customer_name: customerName || '' }, amount).then((cv) => {
+      sh.el.querySelector('[data-qr]').innerHTML = `<img alt="QR PromptPay ยอด ${LB.esc(LB.money(amount))} บาท" src="${cv.toDataURL('image/png')}">`;
+    }).catch(LB.error);
+    sh.el.querySelector('[data-received]').onclick = () => onReceived(sh);
   };
 
   /** แผ่นล่าง QR รับเงิน (ส่ง onPaid มาด้วย จะมีปุ่มให้ผู้ขายยืนยันว่าได้รับเงินแล้ว) */

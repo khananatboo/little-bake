@@ -25,7 +25,6 @@
     const d = await LB.api('dashboard');
     if (!alive()) return;
     const s = LB.state.settings;
-    const vatPct = d.vatThreshold ? Math.min(100, (d.yearSales / d.vatThreshold) * 100) : 0;
     root.innerHTML = `
       <header class="topbar home">
         <img class="logo" src="icons/logo-512.png" alt="โลโก้ ${esc(s.shop_name)}">
@@ -38,6 +37,18 @@
           <div class="tile"><span class="small muted">ออเดอร์ที่เปิดอยู่</span><span class="num">${d.openOrders} ออเดอร์</span></div>
         </div>
         ${d.moneyInToday ? `<p class="small muted" style="margin:-8px 0 0">เงินเข้าวันนี้ ${LB.baht(d.moneyInToday)} (รวมมัดจำ)</p>` : ''}
+
+        <section class="card">
+          <div class="section-title"><h2>ของพร้อมขายในตู้</h2><a class="small" href="#/production">จัดการ</a></div>
+          ${d.stock.length ? d.stock.map((x, idx) => {
+            const warn = x.batches.some((b) => b.state !== 'ok');
+            return `${idx ? '<hr class="divider">' : ''}<div class="stack tight">
+              <div class="row between top"><span class="label grow">${esc(x.name)}</span>
+              <span class="num nowrap" style="font-size:16px">ขายได้ ${Math.max(0, x.free)} ${esc(x.unit)}</span></div>
+              <span class="small ${warn ? 'danger-text' : 'muted'}">ในตู้ ${x.physical}${x.committed ? ` · จองแล้ว ${x.committed}` : ''}${x.nearestExpiry ? ` · หมดอายุ ${esc(LB.dateTh(x.nearestExpiry))}` : ''}${x.expired ? ` · หมดอายุแล้ว ${x.expired}` : ''}</span></div>`;
+          }).join('') : '<p class="muted" style="margin:0">ยังไม่มีของในตู้</p>'}
+          ${d.stock.some((x) => x.free > 0) ? `<a class="btn" href="#/sale">${LB.icon('cart')}ขายหน้าร้าน</a>` : ''}
+        </section>
 
         ${d.rounds.length ? d.rounds.map((r) => `<section class="card">
           <div class="row between top"><div class="stack tight" style="gap:0">
@@ -60,24 +71,7 @@
             : '<p class="muted" style="margin:0">ไม่มีงานค้าง</p>'}
         </section>
 
-        <section class="card">
-          <div class="section-title"><h2>ของพร้อมขายในตู้</h2><a class="small" href="#/production">จัดการ</a></div>
-          ${d.stock.length ? d.stock.map((x, idx) => {
-            const warn = x.batches.some((b) => b.state !== 'ok');
-            return `${idx ? '<hr class="divider">' : ''}<div class="stack tight">
-              <div class="row between top"><span class="label grow">${esc(x.name)}</span>
-              <span class="num nowrap" style="font-size:16px">ขายได้ ${Math.max(0, x.free)} ${esc(x.unit)}</span></div>
-              <span class="small ${warn ? 'danger-text' : 'muted'}">ในตู้ ${x.physical}${x.committed ? ` · จองแล้ว ${x.committed}` : ''}${x.nearestExpiry ? ` · หมดอายุ ${esc(LB.dateTh(x.nearestExpiry))}` : ''}${x.expired ? ` · หมดอายุแล้ว ${x.expired}` : ''}</span></div>`;
-          }).join('') : '<p class="muted" style="margin:0">ยังไม่มีของในตู้</p>'}
-          ${d.stock.some((x) => x.free > 0) ? `<a class="btn" href="#/sale">${LB.icon('cart')}ขายหน้างาน</a>` : ''}
-        </section>
 
-        <section class="card tight">
-          <div class="row between small"><span class="muted">ยอดขายปีนี้เทียบเกณฑ์ VAT</span>
-          <span class="nowrap">${LB.money(d.yearSales)} / ${LB.money(d.vatThreshold)}</span></div>
-          <div class="bar" role="img" aria-label="ยอดขายปีนี้ ${Math.round(vatPct)}% ของเกณฑ์ VAT"><span class="${vatPct >= 80 ? 'b' : 'a'}" style="width:${vatPct}%"></span></div>
-          ${vatPct >= 80 ? '<span class="small danger-text">ใกล้ถึงเกณฑ์ต้องจด VAT (ยื่นภายใน 30 วันเมื่อรายรับเกินเกณฑ์)</span>' : ''}
-        </section>
       </div>
       <a class="fab" href="#/orders/new">${LB.icon('plus')}ออเดอร์ใหม่</a>`;
 

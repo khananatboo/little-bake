@@ -1,4 +1,4 @@
-/* เพิ่มเติม: สรุปยอด ขายหน้างาน เมนูและราคา ตั้งค่าร้าน */
+/* เพิ่มเติม: สรุปยอด ขายหน้าร้าน เมนูและราคา ตั้งค่าร้าน */
 (function () {
   'use strict';
   const LB = window.LB;
@@ -9,7 +9,7 @@
       <span class="grow stack tight" style="gap:0"><span class="label" style="font-size:16px">${title}</span>${sub ? `<span class="small muted">${sub}</span>` : ''}</span>${LB.icon('chevron')}</a>`;
     root.innerHTML = `${LB.topbar('เพิ่มเติม')}<div class="page">
       ${link('#/report', 'chart', 'สรุปยอดขาย', 'วันนี้ เดือนนี้ ไตรมาส ปี')}
-      ${link('#/sale', 'cart', 'ขายหน้างาน', 'ขายของในตู้ที่ไม่ได้จองล่วงหน้า')}
+      ${link('#/sale', 'cart', 'ขายหน้าร้าน', 'ขายของในตู้ที่ไม่ได้จองล่วงหน้า')}
       ${link('#/products', 'tag', 'เมนูและราคา', LB.state.products.filter((p) => p.status === 'active').length + ' เมนูที่เปิดขาย')}
       ${link('#/settings', 'settings', 'ตั้งค่าร้าน', 'PromptPay มัดจำ การยกเลิก ชื่อเพจ')}
       <button type="button" class="card tight link row" data-lock style="text-align:left;font:inherit">${LB.icon('lock')}<span class="grow stack tight" style="gap:0"><span class="label" style="font-size:16px">ล็อกแอป</span><span class="small muted">ต้องใส่ PIN ก่อนใช้ต่อ</span></span></button>
@@ -74,7 +74,7 @@
         </div>
         ${target ? `<section class="card tight"><div class="row between small"><span class="muted">เป้าเดือนนี้</span><span>${LB.money(r.sales)} / ${LB.money(target)}</span></div>
           <div class="bar"><span class="a" style="width:${Math.min(100, (r.sales / target) * 100)}%"></span></div></section>` : ''}
-        <p class="small muted" style="margin:-4px 0 0">ยอดขายนับจากออเดอร์ที่ส่งมอบแล้ว ไม่รวมค่าส่ง${r.discount ? ` · ให้ส่วนลดไป ${LB.baht(r.discount)}` : ''}${r.shipping ? ` · ค่าส่งที่เก็บ ${LB.baht(r.shipping)}` : ''}</p>
+        <p class="small muted" style="margin:-4px 0 0">ยอดขายนับจากออเดอร์ที่ส่งมอบแล้ว ไม่รวมค่าส่งและทิป${r.discount ? ` · ให้ส่วนลดไป ${LB.baht(r.discount)}` : ''}${r.shipping ? ` · ค่าส่งที่เก็บ ${LB.baht(r.shipping)}` : ''}${LB.n(r.tips) ? ` · ได้ทิป ${LB.baht(r.tips)}` : ''}</p>
 
         ${r.byDay.length > 1 ? `<section class="card"><h2>ยอดรายวัน</h2>
           ${r.byDay.map((d) => `<div class="row small"><span style="width:64px" class="muted">${esc(LB.dateShort(d.date))}</span>
@@ -128,46 +128,88 @@
     await load();
   };
 
-  /* ---------------- ขายหน้างาน ---------------- */
+  /* ---------------- ขายหน้าร้าน ---------------- */
 
   LB.views.sale = async (root, params, query, alive) => {
-    root.innerHTML = LB.topbar('ขายหน้างาน', '#/home') + LB.loadingHtml;
+    root.innerHTML = LB.topbar('ขายหน้าร้าน', '#/home') + LB.loadingHtml;
     const st = await LB.api('stock.list');
     if (!alive()) return;
     const items = st.stock.filter((x) => x.free > 0).map((x) => {
       const disc = (x.batches.find((b) => LB.n(b.discount_price) > 0 && b.state !== 'expired') || {}).discount_price;
       return { ...x, sellPrice: LB.n(disc) || x.price, discounted: !!LB.n(disc) };
     });
-    root.innerHTML = `${LB.topbar('ขายหน้างาน', '#/home')}<form class="page no-nav" data-form novalidate>
+    root.innerHTML = `${LB.topbar('ขายหน้าร้าน', '#/home')}<form class="page no-nav" data-form novalidate>
       ${items.length ? items.map((x) => `<div class="card tight" data-line="${esc(x.product_id)}">
         <div class="row"><div class="grow stack tight" style="gap:0"><span class="label" style="font-size:16px">${esc(x.name)}</span>
         <span class="small muted">${x.discounted ? `<s>${LB.money(x.price)}</s> ` : ''}${LB.money(x.sellPrice)} บาท · ขายได้ ${x.free} ${esc(x.unit)}</span></div>
         ${LB.stepper('q', 0, 0, x.free, ' ' + x.name)}</div></div>`).join('') : '<div class="empty">ไม่มีของพร้อมขายในตู้</div>'}
       ${items.length ? `<div class="field"><label for="sl-name">ชื่อลูกค้า (ไม่บังคับ)</label><input id="sl-name" class="input" maxlength="80"></div>
+      <div class="grid2">
+        <div class="field"><label for="sl-disc">ส่วนลด (บาท)</label><input id="sl-disc" class="input" type="text" inputmode="decimal" placeholder="0" data-money></div>
+        <div class="field"><label for="sl-tip">ทิป (บาท)</label><input id="sl-tip" class="input" type="text" inputmode="decimal" placeholder="0" data-money></div>
+      </div>
       <div class="field"><span class="label">รับเงินทาง</span>${LB.choiceHtml('seg', 'method', [['cash', 'เงินสด'], ['promptpay', 'PromptPay'], ['transfer', 'โอน']], 'cash')}</div>
-      <section class="card tight row between"><span class="label">รวม</span><span class="num money" style="font-size:20px" data-total>0 บาท</span></section>
-      <button class="btn primary" type="submit">บันทึกการขาย</button>` : ''}</form>`;
+      <section class="card tight stack tight" data-summary>
+        <div class="kv"><span>ค่าขนม</span><span data-sub>0 บาท</span></div>
+        <div class="kv" data-disc-row hidden><span>ส่วนลด</span><span data-disc>0 บาท</span></div>
+        <div class="kv" data-tip-row hidden><span>ทิป</span><span data-tip>0 บาท</span></div>
+        <div class="kv total"><span>รับเงินรวม</span><span class="num money" style="font-size:20px" data-total>0 บาท</span></div>
+      </section>
+      <button class="btn primary" type="submit" data-submit>บันทึกการขาย</button>` : ''}</form>`;
     const form = root.querySelector('[data-form]');
-    const total = () => {
-      let t = 0;
+    const calc = () => {
+      let sub = 0;
       form.querySelectorAll('[data-line]').forEach((el) => {
         const x = items.find((i) => i.product_id === el.dataset.line);
-        t += (Number(el.querySelector('input').value) || 0) * x.sellPrice;
+        sub += (Number(el.querySelector('input').value) || 0) * x.sellPrice;
       });
-      const out = form.querySelector('[data-total]');
-      if (out) out.textContent = LB.baht(t);
+      const discIn = form.querySelector('#sl-disc');
+      const tipIn = form.querySelector('#sl-tip');
+      const disc = discIn ? Math.max(0, LB.n(discIn.value)) : 0;
+      const tip = tipIn ? Math.max(0, LB.n(tipIn.value)) : 0;
+      return { sub, disc, tip, total: sub - disc + tip };
     };
-    LB.bindSteppers(form, total);
-    LB.bindChoice(form, '.seg');
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
+    const paint = () => {
+      const c = calc();
+      const q = (sel) => form.querySelector(sel);
+      if (!q('[data-total]')) return;
+      q('[data-sub]').textContent = LB.baht(c.sub);
+      q('[data-disc]').textContent = '−' + LB.baht(c.disc);
+      q('[data-tip]').textContent = '+' + LB.baht(c.tip);
+      q('[data-disc-row]').hidden = !c.disc;
+      q('[data-tip-row]').hidden = !c.tip;
+      q('[data-total]').textContent = LB.baht(Math.max(0, c.total));
+    };
+    const method = () => LB.choiceVal(form, 'method');
+    const label = () => {
+      const b = form.querySelector('[data-submit]');
+      if (b) b.textContent = method() === 'promptpay' ? 'แสดง QR รับเงิน' : 'บันทึกการขาย';
+    };
+    LB.bindSteppers(form, paint);
+    LB.bindChoice(form, '.seg', label);
+    form.querySelectorAll('[data-money]').forEach((el) => el.addEventListener('input', paint));
+    const save = async (sheet) => {
       const lines = [...form.querySelectorAll('[data-line]')].map((el) => ({ product_id: el.dataset.line, qty: Math.round(Number(el.querySelector('input').value) || 0) })).filter((i) => i.qty > 0);
-      if (!lines.length) { LB.error('เลือกจำนวนอย่างน้อย 1 รายการ'); return; }
       try {
-        const o = await LB.busy(() => LB.api('sales.quick', { items: lines, method: LB.choiceVal(form, 'method'), customer_name: form.querySelector('#sl-name').value }));
-        LB.toast(`บันทึกการขาย ${LB.baht(o.total)} แล้ว`);
+        const o = await LB.busy(() => LB.api('sales.quick', {
+          items: lines, method: method(), customer_name: form.querySelector('#sl-name').value,
+          discount: form.querySelector('#sl-disc').value, tip: form.querySelector('#sl-tip').value
+        }));
+        if (sheet) sheet.close();
+        LB.toast(`บันทึกการขาย ${LB.baht(LB.n(o.total) + LB.n(o.tip))} แล้ว`);
         location.replace('#/home');
       } catch (err) { LB.error(err); }
+    };
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const c = calc();
+      if (!c.sub) { LB.error('เลือกจำนวนอย่างน้อย 1 รายการ'); return; }
+      if (c.disc > c.sub) { LB.error('ส่วนลดมากกว่ายอดค่าขนม'); return; }
+      if (method() === 'promptpay' && c.total > 0) {
+        LB.openSaleQr(c.total, form.querySelector('#sl-name').value.trim(), save);
+        return;
+      }
+      save(null);
     });
   };
 

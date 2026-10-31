@@ -52,8 +52,8 @@
   };
 
   LB.L = {
-    kind: { deposit: 'มัดจำ', no_deposit: 'ไม่มัดจำ', ready: 'ของพร้อมขาย', walkin: 'ขายหน้างาน' },
-    channel: { facebook: 'Facebook', ig: 'IG', direct: 'สั่งตรง', walkin: 'หน้างาน' },
+    kind: { deposit: 'มัดจำ', no_deposit: 'ไม่มัดจำ', ready: 'ของพร้อมขาย', walkin: 'ขายหน้าร้าน' },
+    channel: { facebook: 'Facebook', ig: 'IG', direct: 'สั่งตรง', walkin: 'หน้าร้าน' },
     handover: { pickup: 'รับเอง', shop_delivery: 'ร้านไปส่ง', courier: 'เรียกรถส่ง' },
     status: { pending_deposit: 'รอมัดจำ', confirmed: 'ยืนยันแล้ว', ready: 'พร้อมส่ง', delivered: 'ส่งมอบแล้ว', cancelled: 'ยกเลิก' },
     method: { promptpay: 'PromptPay', transfer: 'โอนเข้าบัญชี', cash: 'เงินสด' },

@@ -18,7 +18,7 @@
       <div class="row between"><span class="label grow">${esc(o.customer_name)} <span class="small muted" style="font-weight:400">· ${esc(LB.L.channel[o.channel] || '')}</span></span>
       <span class="row" style="gap:4px">${o.kind === 'no_deposit' ? '<span class="badge outline">ไม่มัดจำ</span>' : ''}${LB.badge(o.status)}</span></div>
       <span style="font-size:14px;line-height:20px">${esc(LB.itemsText(o.items))}</span>
-      <div class="row between small muted"><span>${o.kind === 'walkin' ? 'ขายหน้างาน' : esc(LB.L.handover[o.handover])} · ${esc(o.status === 'delivered' ? LB.dateTimeTh(o.delivered_at) : LB.relDay(o.due_date))}${o.status !== 'delivered' && o.due_time ? ' ' + esc(o.due_time) : ''}</span><span>${esc(o.id)}</span></div>
+      <div class="row between small muted"><span>${o.kind === 'walkin' ? 'ขายหน้าร้าน' : esc(LB.L.handover[o.handover])} · ${esc(o.status === 'delivered' ? LB.dateTimeTh(o.delivered_at) : LB.relDay(o.due_date))}${o.status !== 'delivered' && o.due_time ? ' ' + esc(o.due_time) : ''}</span><span>${esc(o.id)}</span></div>
       <div class="row between"><span class="small muted">${money}</span><span class="num nowrap" style="font-size:16px">${LB.baht(due)}</span></div></a>`;
   }
 
@@ -208,7 +208,8 @@
             <div class="kv"><span>ค่าขนม</span><span>${LB.baht(o.subtotal)}</span></div>
             ${LB.n(o.discount) ? `<div class="kv"><span>ส่วนลด</span><span>−${LB.baht(o.discount)}</span></div>` : ''}
             ${LB.n(o.shipping_fee) ? `<div class="kv"><span>ค่าส่ง</span><span>${LB.baht(o.shipping_fee)}</span></div>` : (o.handover !== 'pickup' ? '<div class="kv"><span>ค่าส่ง</span><span class="muted">ตามจริง</span></div>' : '')}
-            <div class="kv total"><span>รวม</span><span>${LB.baht(LB.n(o.total) + LB.n(o.shipping_fee))}</span></div>
+            ${LB.n(o.tip) ? `<div class="kv"><span>ทิป</span><span>+${LB.baht(o.tip)}</span></div>` : ''}
+            <div class="kv total"><span>รวม</span><span>${LB.baht(LB.n(o.total) + LB.n(o.shipping_fee) + LB.n(o.tip))}</span></div>
             ${o.kind === 'deposit' ? `<div class="kv"><span>มัดจำ ${esc(LB.state.settings.deposit_percent)}%</span><span>${LB.baht(o.deposit_due)} ${o.depositPaid ? '✓' : ''}</span></div>` : ''}
             <div class="kv"><span>จ่ายแล้ว</span><span>${LB.baht(o.paid)}</span></div>
             ${o.status !== 'cancelled' ? `<div class="kv total"><span>ค้างชำระ</span><span class="${o.balance > 0 ? 'money' : ''}">${LB.baht(o.balance)}</span></div>` : `<div class="kv"><span>คืนเงิน</span><span>${LB.baht(o.refund)}</span></div>`}
