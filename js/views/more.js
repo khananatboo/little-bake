@@ -1,4 +1,4 @@
-/* เพิ่มเติม: สรุปยอด ขายหน้าร้าน เมนูและราคา ตั้งค่าร้าน */
+/* เพิ่มเติม: สรุปยอด ขายหน้าร้าน เมนูและราคา สูตร วัตถุดิบ ตั้งค่าร้าน */
 (function () {
   'use strict';
   const LB = window.LB;
@@ -11,6 +11,8 @@
       ${link('#/report', 'chart', 'สรุปยอดขาย', 'วันนี้ เดือนนี้ ไตรมาส ปี')}
       ${link('#/sale', 'cart', 'ขายหน้าร้าน', 'ขายของในตู้ที่ไม่ได้จองล่วงหน้า')}
       ${link('#/products', 'tag', 'เมนูและราคา', LB.state.products.filter((p) => p.status === 'active').length + ' เมนูที่เปิดขาย')}
+      ${link('#/recipes', 'book', 'สูตรและต้นทุน', 'ต้นทุนต่อชิ้นและส่วนต่างของแต่ละเมนู')}
+      ${link('#/materials', 'box', 'วัตถุดิบ', 'ยี่ห้อ ขนาด และราคาที่ใช้คิดต้นทุน')}
       ${link('#/settings', 'settings', 'ตั้งค่าร้าน', 'PromptPay มัดจำ การยกเลิก ชื่อเพจ')}
       <button type="button" class="card tight link row" data-lock style="text-align:left;font:inherit">${LB.icon('lock')}<span class="grow stack tight" style="gap:0"><span class="label" style="font-size:16px">ล็อกแอป</span><span class="small muted">ต้องใส่ PIN ก่อนใช้ต่อ</span></span></button>
       <button type="button" class="card tight link row" data-pin style="text-align:left;font:inherit">${LB.icon('lock')}<span class="grow label" style="font-size:16px">เปลี่ยน PIN</span>${LB.icon('chevron')}</button>

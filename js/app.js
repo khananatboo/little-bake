@@ -19,6 +19,11 @@
     [/^#\/more$/, 'more', 'more'],
     [/^#\/report$/, 'report', 'more'],
     [/^#\/products$/, 'products', 'more'],
+    [/^#\/materials$/, 'materials', 'more'],
+    [/^#\/material\/([^/]+)$/, 'material', 'more'],
+    [/^#\/recipes$/, 'recipes', 'more'],
+    [/^#\/recipe\/([^/]+)\/edit$/, 'recipeEdit', null],
+    [/^#\/recipe\/([^/]+)$/, 'recipe', 'more'],
     [/^#\/settings$/, 'settings', null],
     [/^#\/sale$/, 'sale', null]
   ];
