@@ -187,7 +187,7 @@
       if (!chips.some(([k]) => k === filter)) filter = 'all';
       root.querySelector('[data-chips]').innerHTML = chips.map(([k, l]) => `<button type="button" class="chip" data-f="${esc(k)}" aria-pressed="${k === filter}">${esc(l)}</button>`).join('');
       const words = q.toLowerCase();
-      const shown = mats.filter((m) => (!words || m.name.toLowerCase().includes(words) || m.items.some((i) => i.label.toLowerCase().includes(words)))
+      const shown = LB.sortByName(mats, (m) => m.name).filter((m) => (!words || m.name.toLowerCase().includes(words) || m.items.some((i) => i.label.toLowerCase().includes(words)))
         && (filter === 'all' || (filter === 'need' ? m.status === 'active' && !hasCost(m.unit_cost) : m.kind === filter)));
       const groups = [...KINDS.map((k) => [k, shown.filter((m) => m.kind === k && m.status === 'active')]),
         ['เลิกใช้', shown.filter((m) => m.status !== 'active')]].filter(([, list]) => list.length);
@@ -224,7 +224,7 @@
           ${m.note ? `<p class="small pre" style="margin:0">${esc(m.note)}</p>` : ''}
         </section>
         <h2>ยี่ห้อและขนาดที่ซื้อ</h2>
-        ${m.items.map((i) => `<button type="button" class="card tight link" data-item="${esc(i.id)}" style="text-align:left;font:inherit">
+        ${LB.sortByName(m.items, (i) => i.label).map((i) => `<button type="button" class="card tight link" data-item="${esc(i.id)}" style="text-align:left;font:inherit">
           <div class="row between"><span class="label grow">${esc(i.label)}</span>${i.id === m.main_item ? '<span class="badge ok">ใช้คิดต้นทุน</span>' : ''}${i.status !== 'active' ? '<span class="badge outline">เลิกซื้อ</span>' : ''}</div>
           <span class="small muted">${esc(i.id)} · ${esc(itemSpec(i, m.unit))}${hasCost(i.unit_cost) ? ` · ${unitCostFmt(i.unit_cost)} บาท/${esc(m.unit)}` : ''}</span>
           ${hasCost(i.unit_cost) ? '' : '<span class="small danger-text">ใส่ขนาดและราคาเพื่อคิดต้นทุน</span>'}
@@ -262,7 +262,7 @@
     const data = await LB.api('recipes.list');
     if (!alive()) return;
     const ctx = makeCtx(data.materials, data.recipes);
-    const ps = LB.state.products.filter((p) => p.status === 'active' || ctx.recs.has(p.id));
+    const ps = LB.sortByName(LB.state.products.filter((p) => p.status === 'active' || ctx.recs.has(p.id)), (p) => p.name);
     const row = (p) => {
       const r = ctx.recs.get(p.id);
       if (!r) {
@@ -438,8 +438,8 @@
     let ctx = makeCtx(data.materials, data.recipes);
     const r = ctx.recs.get(pid);
     const st = toModel(r);
-    const bases = data.recipes.filter((x) => x.product_id !== pid && !x.base_product);
-    const matOptions = () => data.materials.filter((m) => m.status === 'active').map((m) => `<option value="${esc(m.name)}">`).join('');
+    const bases = LB.sortByName(data.recipes.filter((x) => x.product_id !== pid && !x.base_product), (x) => pname(x.product_id));
+    const matOptions = () => LB.sortByName(data.materials.filter((m) => m.status === 'active'), (m) => m.name).map((m) => `<option value="${esc(m.name)}">`).join('');
     root.innerHTML = `${LB.topbar(r ? 'แก้สูตร' : 'เขียนสูตร', recipeHref(pid))}<form class="page no-nav" data-form novalidate>
       <datalist id="mat-list">${matOptions()}</datalist>
       <section class="card tight"><span class="label" style="font-size:16px">${esc(p.name)}</span>

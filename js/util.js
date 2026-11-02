@@ -3,6 +3,8 @@
   'use strict';
   const LB = (window.LB = window.LB || {});
   LB.views = LB.views || {};
+  /** เวอร์ชันหน้าแอป (ฐานข้อมูลมีเลขเวอร์ชันของตัวเอง) */
+  LB.APP_VERSION = '2.3.1';
 
   LB.esc = (s) => String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, (c) => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -105,6 +107,17 @@
     new URLSearchParams(hash.slice(i + 1)).forEach((v, k) => { out[k] = v; });
     return out;
   };
+
+  /** เรียงชื่อแบบพจนานุกรม ก-ฮ ก่อน แล้วตามด้วย A-Z (ตัวเลขในชื่อเรียงตามค่า เช่น 2 ก่อน 10) */
+  const collator = new Intl.Collator('th', { numeric: true, sensitivity: 'base', ignorePunctuation: false });
+  const isThai = (s) => /^[\u0E00-\u0E7F]/.test(s);
+  LB.byName = (a, b) => {
+    const x = String(a === null || a === undefined ? '' : a).trim();
+    const y = String(b === null || b === undefined ? '' : b).trim();
+    if (isThai(x) !== isThai(y)) return isThai(x) ? -1 : 1;
+    return collator.compare(x, y);
+  };
+  LB.sortByName = (list, key) => [...list].sort((p, q) => LB.byName(key(p), key(q)));
 
   /** สรุปรายการขนม เช่น "Nutella Cheesecake ×2 · Brownie ×1" */
   LB.itemsText = (items) => (items || []).map((i) => `${i.product_name} ×${i.qty}`).join(' · ');

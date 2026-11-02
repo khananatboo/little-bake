@@ -18,7 +18,7 @@
       <button type="button" class="card tight link row" data-pin style="text-align:left;font:inherit">${LB.icon('lock')}<span class="grow label" style="font-size:16px">เปลี่ยน PIN</span>${LB.icon('chevron')}</button>
       <button type="button" class="card tight link row" data-others style="text-align:left;font:inherit">${LB.icon('lock')}<span class="grow stack tight" style="gap:0"><span class="label" style="font-size:16px">ล็อกเครื่องอื่นทั้งหมด</span><span class="small muted">ใช้เมื่อมือถือหรือแท็บเล็ตหาย</span></span></button>
       <button type="button" class="card tight link row" data-logout style="text-align:left;font:inherit">${LB.icon('logout')}<span class="grow label" style="font-size:16px">ออกจากระบบ</span></button>
-      <p class="small muted" style="margin:0">ผู้ใช้: ${esc(LB.state.user.name)} · ${esc((LB.session() || {}).email || '')} · Little Bake เวอร์ชัน ${esc(LB.state.version)}</p>
+      <p class="small muted" style="margin:0">ผู้ใช้: ${esc(LB.state.user.name)} · ${esc((LB.session() || {}).email || '')} · Little Bake เวอร์ชัน ${esc(LB.APP_VERSION)}${LB.state.version !== LB.APP_VERSION ? ` (ฐานข้อมูล ${esc(LB.state.version)})` : ''}</p>
     </div>`;
     root.querySelector('[data-lock]').onclick = () => LB.lockApp();
     root.querySelector('[data-others]').onclick = async () => {
@@ -136,7 +136,7 @@
     root.innerHTML = LB.topbar('ขายหน้าร้าน', '#/home') + LB.loadingHtml;
     const st = await LB.api('stock.list');
     if (!alive()) return;
-    const items = st.stock.filter((x) => x.free > 0).map((x) => {
+    const items = LB.sortByName(st.stock.filter((x) => x.free > 0), (x) => x.name).map((x) => {
       const disc = (x.batches.find((b) => LB.n(b.discount_price) > 0 && b.state !== 'expired') || {}).discount_price;
       return { ...x, sellPrice: LB.n(disc) || x.price, discounted: !!LB.n(disc) };
     });
@@ -252,7 +252,7 @@
 
   LB.views.products = async (root) => {
     const paint = () => {
-      const ps = LB.state.products;
+      const ps = LB.sortByName(LB.state.products, (p) => p.name);
       const row = (p) => `<button type="button" class="card tight link" data-p="${esc(p.id)}" style="text-align:left;font:inherit">
         <div class="row between"><span class="label grow" style="font-size:16px">${esc(p.name)}</span><span class="num money nowrap">${LB.baht(p.price)}</span></div>
         <span class="small muted">${esc(p.category)} · ${esc(p.unit)} · อายุ ${p.shelf_days} วัน ${esc(p.storage || '')}${p.allergens ? ' · มี ' + esc(p.allergens) : ''}</span></button>`;
