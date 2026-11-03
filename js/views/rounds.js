@@ -15,7 +15,7 @@
       <span class="small muted">ปิดรับ ${esc(LB.dateTh(r.close_date))} · ${r.orderCount} ออเดอร์</span></div>${LB.roundBadge(r.state)}</div>
       <span class="small">${r.items.map((i) => `${esc(i.name)} ${i.ordered}/${i.max_qty}`).join(' · ')}</span></a>`;
     root.innerHTML = `${LB.topbar('รอบผลิต')}<div class="page">
-      <a class="btn primary" href="#/rounds/new">${LB.icon('plus')}เปิดรอบผลิตใหม่</a>
+      <a class="btn" href="#/rounds/new">${LB.icon('calendar')}เปิดรอบผลิตใหม่</a>
       ${current.length ? current.map(card).join('') : '<div class="empty">ยังไม่มีรอบที่กำลังดำเนินอยู่</div>'}
       ${past.length ? `<h2 class="small muted" style="font-family:var(--font-body);font-weight:500">รอบที่ผ่านมา</h2>${past.map(card).join('')}` : ''}
     </div>`;

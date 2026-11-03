@@ -47,7 +47,7 @@
               <span class="num nowrap" style="font-size:16px">ขายได้ ${Math.max(0, x.free)} ${esc(x.unit)}</span></div>
               <span class="small ${warn ? 'danger-text' : 'muted'}">ในตู้ ${x.physical}${x.committed ? ` · จองแล้ว ${x.committed}` : ''}${x.nearestExpiry ? ` · หมดอายุ ${esc(LB.dateTh(x.nearestExpiry))}` : ''}${x.expired ? ` · หมดอายุแล้ว ${x.expired}` : ''}</span></div>`;
           }).join('') : '<p class="muted" style="margin:0">ยังไม่มีของในตู้</p>'}
-          ${d.stock.some((x) => x.free > 0) ? `<a class="btn" href="#/sale">${LB.icon('cart')}ขายหน้าร้าน</a>` : ''}
+          ${d.stock.some((x) => x.free > 0) ? `<a class="btn solid" href="#/sale">${LB.icon('cart')}ขายหน้าร้าน</a>` : ''}
         </section>
 
         ${d.rounds.length ? d.rounds.map((r) => `<section class="card">
@@ -60,7 +60,7 @@
           ${r.state === 'open' ? `<button type="button" class="btn" data-story="${esc(r.id)}">${LB.icon('share')}แชร์ประกาศ</button>` : `<a class="btn" href="#/production?round=${esc(r.id)}">${LB.icon('cake')}ไปหน้าผลิต</a>`}</div>
         </section>`).join('') : `<section class="card"><h2>ยังไม่มีรอบผลิตที่เปิดอยู่</h2>
           <p class="muted" style="margin:0">เปิดรอบใหม่เพื่อเริ่มรับ pre-order</p>
-          <a class="btn primary" href="#/rounds/new">เปิดรอบผลิต</a></section>`}
+          <a class="btn" href="#/rounds/new">${LB.icon('calendar')}เปิดรอบผลิต</a></section>`}
 
         <section class="card">
           <h2>ต้องทำวันนี้</h2>
