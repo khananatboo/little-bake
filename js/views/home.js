@@ -71,6 +71,16 @@
             : '<p class="muted" style="margin:0">ไม่มีงานค้าง</p>'}
         </section>
 
+        ${(d.materialAlerts || []).length ? `<section class="card">
+          <div class="section-title"><h2>วัตถุดิบต้องดู</h2><a class="small" href="#/materials">วัตถุดิบ</a></div>
+          ${LB.sortByName(d.materialAlerts, (a) => a.name).slice(0, 8).map((a, idx) => `${idx ? '<hr class="divider">' : ''}<a class="row between top plain" href="#/material/${encodeURIComponent(a.name)}">
+            <span class="label grow">${esc(a.name)}</span><span class="small danger-text right">${[
+              a.low ? `เหลือ ${LB.money(a.on_hand)} ${esc(a.unit)} (สั่งเมื่อเหลือ ${LB.money(a.reorder_at)})` : '',
+              LB.n(a.expired) ? `หมดอายุแล้ว ${LB.money(a.expired)} ${esc(a.unit)}` : '',
+              LB.n(a.expiring) && a.nearest_expiry ? `ใกล้หมดอายุ ${esc(LB.dateShort(a.nearest_expiry))}` : ''].filter(Boolean).join('<br>')}</span></a>`).join('')}
+          ${d.materialAlerts.length > 8 ? `<span class="small muted">และอีก ${d.materialAlerts.length - 8} รายการ</span>` : ''}
+        </section>` : ''}
+
 
       </div>
       <a class="fab" href="#/orders/new">${LB.icon('plus')}ออเดอร์ใหม่</a>`;

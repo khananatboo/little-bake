@@ -4,7 +4,7 @@
   const LB = (window.LB = window.LB || {});
   LB.views = LB.views || {};
   /** เวอร์ชันหน้าแอป (ฐานข้อมูลมีเลขเวอร์ชันของตัวเอง) */
-  LB.APP_VERSION = '2.3.2';
+  LB.APP_VERSION = '2.4.0';
 
   LB.esc = (s) => String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, (c) => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

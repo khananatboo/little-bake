@@ -71,10 +71,28 @@
     return { sections, base, batch, yieldQty, perUnit: batch / yieldQty, missing: [...missing] };
   };
 
+  /** สถานะสต็อก: ใกล้หมด (ต่ำกว่าจุดสั่งซื้อ หลังเริ่มนับแล้ว) หมดอายุ ใกล้หมดอายุ */
+  const stockState = (m) => ({
+    low: !!m.tracked && LB.n(m.reorder_at) > 0 && LB.n(m.on_hand) <= LB.n(m.reorder_at),
+    expired: LB.n(m.expired) > 0,
+    expiring: LB.n(m.expiring) > 0
+  });
+  const packOf = (m) => {
+    const main = m.items.find((i) => i.id === m.main_item);
+    return main && LB.n(main.pack_size) > 0 && main.pack_unit ? main : null;
+  };
+  /** "350 g (≈ 1.8 ก้อน)" */
+  const stockText = (m, v) => {
+    const x = LB.n(v === undefined ? m.on_hand : v);
+    const p = packOf(m);
+    return `${qtyFmt(x)} ${m.unit}` + (p && x >= LB.n(p.pack_size) && LB.n(p.pack_size) > 1 ? ` (≈ ${qtyFmt(Math.round((x / LB.n(p.pack_size)) * 10) / 10)} ${p.pack_unit})` : '');
+  };
+
   const missingHtml = (list) => (list.length ? `<p class="small danger-text" style="margin:0">ยังคิดต้นทุนไม่ครบ: ${
     list.map((m) => `<a href="${matHref(m)}">${esc(m)}</a>`).join(', ')} ยังไม่มีราคาหรือขนาด</p>` : '');
 
   /* ---------------- แผ่นแก้ไขวัตถุดิบ ---------------- */
+
 
   function materialSheet(m, prefill, onSaved) {
     const s = LB.sheet(m ? 'แก้ไขวัตถุดิบ' : 'เพิ่มวัตถุดิบ', `
@@ -85,6 +103,8 @@
         <div class="field"><label for="mt-unit">หน่วยที่สูตรใช้</label><input id="mt-unit" class="input" list="unit-list" value="${esc(m ? m.unit : 'g')}" maxlength="20">
           <datalist id="unit-list">${UNITS.map((u) => `<option value="${u}">`).join('')}</datalist></div></div>
       ${m && (m.items.length || m.used_in.length) ? '<span class="hint">ถ้าเปลี่ยนหน่วย ต้องแก้ขนาดของทุกยี่ห้อและปริมาณในสูตรให้เป็นหน่วยใหม่ด้วย</span>' : ''}
+      <div class="field"><label for="mt-reorder">จุดสั่งซื้อ (หน่วยที่สูตรใช้)</label><input id="mt-reorder" class="input" inputmode="decimal" value="${esc(m && LB.n(m.reorder_at) ? Number(m.reorder_at) : '')}" placeholder="0">
+        <span class="hint">เตือนเมื่อเหลือไม่เกินจำนวนนี้ เว้นว่างหรือ 0 = ไม่เตือน</span></div>
       <div class="field"><label for="mt-note">หมายเหตุ</label><textarea id="mt-note" class="input" rows="2" maxlength="300">${esc(m ? m.note : '')}</textarea></div>
       ${m ? `<label class="row"><input type="checkbox" class="check" id="mt-active" ${m.status === 'active' ? 'checked' : ''}><span>ยังใช้อยู่ (ปิดเพื่อซ่อนจากรายการตอนเขียนสูตร)</span></label>` : ''}
       <button type="button" class="btn primary" data-save>บันทึก</button>`);
@@ -94,6 +114,7 @@
       try {
         const res = await LB.busy(() => LB.api('materials.save', {
           old_name: m ? m.name : '', name: g('#mt-name'), kind: g('#mt-kind'), unit: g('#mt-unit'), note: g('#mt-note'),
+          reorder_at: g('#mt-reorder').replace(/,/g, '').trim(),
           status: act && !act.checked ? 'inactive' : 'active'
         }));
         s.close();
@@ -163,32 +184,47 @@
     let filter = query.f || 'all';
     let q = '';
     root.innerHTML = `${LB.topbar('วัตถุดิบ', '#/more')}<div class="page">
-      <p class="small muted" style="margin:0">สูตรใช้ชื่อกลาง ต้นทุนคิดจากยี่ห้อที่ตั้งเป็นหลัก ราคาต่อหน่วยที่ซื้อ ÷ ขนาด</p>
+      <div class="btn-row"><a class="btn solid" href="#/receive">${LB.icon('box')}รับของเข้า</a><a class="btn" href="#/count">${LB.icon('list')}นับสต็อก</a></div>
       <input class="input" type="search" data-q placeholder="ค้นหาชื่อหรือยี่ห้อ" aria-label="ค้นหาวัตถุดิบ">
       <div class="chips" data-chips></div>
-      <button type="button" class="btn primary" data-add>${LB.icon('plus')}เพิ่มวัตถุดิบ</button>
-      <div class="stack" data-list></div></div>`;
+      <div class="stack" data-list></div>
+      <p class="small muted" style="margin:0">สูตรใช้ชื่อกลาง ต้นทุนคิดจากราคาล่าสุดของยี่ห้อที่ตั้งเป็นหลัก</p>
+      <button type="button" class="btn" data-add>${LB.icon('plus')}เพิ่มวัตถุดิบ</button></div>`;
     const card = (m) => {
+      const ss = stockState(m);
       const main = m.items.find((i) => i.id === m.main_item);
-      const bits = [main ? esc(main.label) + ' · ' + esc(itemSpec(main, m.unit)) : 'ยังไม่มียี่ห้อหรือขนาด'];
+      const bits = [hasCost(m.unit_cost) ? `${unitCostFmt(m.unit_cost)} บาท/${esc(m.unit)}` : 'ยังไม่มีราคา', main ? esc(main.label) : 'ยังไม่มียี่ห้อ'];
       if (m.items.length > 1) bits.push(m.items.length + ' ยี่ห้อ/ขนาด');
-      if (m.used_in.length) bits.push('ใช้ใน ' + m.used_in.length + ' สูตร');
+      const badges = (ss.low ? '<span class="badge warn">ใกล้หมด</span>' : '')
+        + (ss.expired ? '<span class="badge expired">มีของหมดอายุ</span>' : ss.expiring ? '<span class="badge warn">ใกล้หมดอายุ</span>' : '')
+        + (hasCost(m.unit_cost) ? '' : '<span class="badge outline">ต้องเติมราคา</span>');
       return `<a class="card tight link" href="${matHref(m.name)}">
-        <div class="row between"><span class="label grow" style="font-size:16px">${esc(m.name)}</span>${hasCost(m.unit_cost)
-          ? `<span class="nowrap"><span class="num">${unitCostFmt(m.unit_cost)}</span> <span class="small muted">บาท/${esc(m.unit)}</span></span>`
-          : '<span class="badge warn">ต้องเติมราคา</span>'}</div>
-        <span class="small muted">${bits.join(' · ')}</span></a>`;
+        <div class="row between"><span class="label grow" style="font-size:16px">${esc(m.name)}</span>${m.tracked
+          ? `<span class="nowrap"><span class="small muted">เหลือ</span> <span class="num">${qtyFmt(m.on_hand)}</span> <span class="small muted">${esc(m.unit)}</span></span>`
+          : '<span class="small muted nowrap">ยังไม่นับ</span>'}</div>
+        <span class="small muted">${bits.join(' · ')}</span>${badges ? `<div class="row wrap" style="gap:6px">${badges}</div>` : ''}</a>`;
     };
     const paint = () => {
       const active = mats.filter((m) => m.status === 'active');
-      const needs = active.filter((m) => !hasCost(m.unit_cost)).length;
+      const count = (fn) => active.filter(fn).length;
+      const low = count((m) => stockState(m).low);
+      const exp = count((m) => stockState(m).expired || stockState(m).expiring);
+      const needs = count((m) => !hasCost(m.unit_cost));
       const kinds = KINDS.filter((k) => mats.some((m) => m.kind === k));
-      const chips = [['all', 'ทั้งหมด'], ...(needs ? [['need', `ต้องเติมราคา ${needs}`]] : []), ...kinds.map((k) => [k, k])];
+      const chips = [['all', 'ทั้งหมด'], ...(low ? [['low', `ใกล้หมด ${low}`]] : []), ...(exp ? [['exp', `หมดอายุ/ใกล้หมดอายุ ${exp}`]] : []),
+        ...(needs ? [['need', `ต้องเติมราคา ${needs}`]] : []), ...kinds.map((k) => [k, k])];
       if (!chips.some(([k]) => k === filter)) filter = 'all';
       root.querySelector('[data-chips]').innerHTML = chips.map(([k, l]) => `<button type="button" class="chip" data-f="${esc(k)}" aria-pressed="${k === filter}">${esc(l)}</button>`).join('');
       const words = q.toLowerCase();
-      const shown = LB.sortByName(mats, (m) => m.name).filter((m) => (!words || m.name.toLowerCase().includes(words) || m.items.some((i) => i.label.toLowerCase().includes(words)))
-        && (filter === 'all' || (filter === 'need' ? m.status === 'active' && !hasCost(m.unit_cost) : m.kind === filter)));
+      const pass = (m) => {
+        if (filter === 'all') return true;
+        if (filter === 'low') return m.status === 'active' && stockState(m).low;
+        if (filter === 'exp') return m.status === 'active' && (stockState(m).expired || stockState(m).expiring);
+        if (filter === 'need') return m.status === 'active' && !hasCost(m.unit_cost);
+        return m.kind === filter;
+      };
+      const shown = LB.sortByName(mats, (m) => m.name).filter((m) => (!words || m.name.toLowerCase().includes(words)
+        || m.items.some((i) => i.label.toLowerCase().includes(words))) && pass(m));
       const groups = [...KINDS.map((k) => [k, shown.filter((m) => m.kind === k && m.status === 'active')]),
         ['เลิกใช้', shown.filter((m) => m.status !== 'active')]].filter(([, list]) => list.length);
       root.querySelector('[data-list]').innerHTML = groups.length ? groups.map(([k, list]) => `<h2>${esc(k)} <span class="small muted">${list.length}</span></h2>${list.map(card).join('')}`).join('')
@@ -203,11 +239,14 @@
     root.querySelector('[data-add]').onclick = () => materialSheet(null, '', (res) => LB.go(matHref(res.name)));
   };
 
+  const MOVE = { in: 'รับเข้า', count: 'นับสต็อก', use: 'ใช้ผลิต', waste: 'ทิ้ง' };
+
   LB.views.material = async (root, params, query, alive) => {
     const name = params[0];
     root.innerHTML = LB.topbar(name, '#/materials') + LB.loadingHtml;
-    let mats = (await LB.api('materials.list')).materials;
+    const [ml, sm] = await Promise.all([LB.api('materials.list'), LB.api('stock.material', { name })]);
     if (!alive()) return;
+    let mats = ml.materials;
     const paint = () => {
       const m = mats.find((x) => x.name === name);
       if (!m) {
@@ -215,23 +254,42 @@
         return;
       }
       const main = m.items.find((i) => i.id === m.main_item);
-      root.innerHTML = `${LB.topbar(m.name, '#/materials', `<button type="button" class="icon-btn" data-edit aria-label="แก้ชื่อ ประเภท หน่วย">${LB.icon('edit')}</button>`)}<div class="page">
+      const ss = stockState(m);
+      const u = esc(m.unit);
+      const lots = sm.lots.map((l, idx) => `${idx ? '<hr class="divider">' : ''}<div class="small">
+          <div>${esc(LB.dateShort(l.received_date))} · ${l.source === 'count' ? 'จากนับสต็อก' : esc(l.label || 'รับเข้า')}${l.supplier ? ' · ' + esc(l.supplier) : ''}</div>
+          <div class="muted">เหลือ ${qtyFmt(l.remaining)}/${qtyFmt(l.qty)} ${u}${l.expire_date ? ` · <span class="${l.expire_date < LB.today() ? 'danger-text' : ''}">หมดอายุ ${esc(LB.dateTh(l.expire_date))}</span>` : ''}${hasCost(l.unit_cost) ? ` · ${unitCostFmt(l.unit_cost)} บาท/${u}` : ''}</div></div>`).join('');
+      const moves = sm.moves.map((v) => `<div class="kv small"><span class="grow">${esc(LB.dateShort(v.date))} ${esc(MOVE[v.type] || v.type)}${v.label && v.type === 'in' ? ' · ' + esc(v.label) : ''}${v.note ? ' · ' + esc(v.note) : ''}</span>
+          <span class="nowrap ${LB.n(v.qty) < 0 ? 'danger-text' : ''}">${LB.n(v.qty) === 0 ? 'ตรงกับระบบ' : (LB.n(v.qty) > 0 ? '+' : '−') + qtyFmt(Math.abs(LB.n(v.qty))) + ' ' + u}</span></div>`).join('');
+      root.innerHTML = `${LB.topbar(m.name, '#/materials', `<button type="button" class="icon-btn" data-edit aria-label="แก้ชื่อ ประเภท หน่วย จุดสั่งซื้อ">${LB.icon('edit')}</button>`)}<div class="page">
+        <section class="card tight">
+          <div class="row between"><span class="label" style="font-size:16px">คงเหลือ</span>${m.tracked
+            ? `<span class="num" style="font-size:20px">${esc(stockText(m))}</span>` : '<span class="muted">ยังไม่ได้นับสต็อก</span>'}</div>
+          ${LB.n(m.reorder_at) > 0 ? `<span class="small ${ss.low ? 'danger-text' : 'muted'}">${ss.low ? 'ถึงจุดสั่งซื้อแล้ว · สั่งเมื่อเหลือ' : 'จุดสั่งซื้อ: สั่งเมื่อเหลือ'} ${qtyFmt(m.reorder_at)} ${u}</span>`
+            : '<span class="small muted">ยังไม่ได้ตั้งจุดสั่งซื้อ (กดรูปดินสอด้านบน)</span>'}
+          ${ss.expired ? `<span class="small danger-text">หมดอายุแล้ว ${qtyFmt(m.expired)} ${u} ทิ้งแล้วกดนับสต็อกเพื่อปรับยอด</span>` : ''}
+          ${m.nearest_expiry ? `<span class="small ${ss.expiring ? 'danger-text' : 'muted'}">หมดอายุใกล้สุด ${esc(LB.dateTh(m.nearest_expiry))}</span>` : ''}
+          ${m.tracked ? '' : '<span class="small muted">กดนับสต็อกเพื่อใส่ยอดที่มีอยู่ตอนนี้ หรือรับของเข้าเมื่อซื้อมา</span>'}
+          <div class="btn-row"><a class="btn solid" href="#/receive?m=${encodeURIComponent(m.name)}">${LB.icon('box')}รับของเข้า</a><a class="btn" href="#/count?m=${encodeURIComponent(m.name)}">${LB.icon('list')}นับสต็อก</a></div>
+          ${lots ? `<details class="more-opts"><summary>ล็อตที่เหลือ ${sm.lots.length} ล็อต (ใช้ล็อตที่หมดอายุก่อน)</summary><div class="stack tight" style="margin-top:8px">${lots}</div></details>` : ''}
+          ${moves ? `<details class="more-opts"><summary>ประวัติล่าสุด</summary><div class="stack tight" style="margin-top:8px">${moves}</div></details>` : ''}
+        </section>
         <section class="card tight">
           <div class="kv"><span class="muted">ประเภท</span><span>${esc(m.kind)}${m.status !== 'active' ? ' · เลิกใช้' : ''}</span></div>
-          <div class="kv"><span class="muted">หน่วยที่สูตรใช้</span><span>${esc(m.unit)}</span></div>
-          <div class="kv"><span class="muted">ต้นทุนที่ใช้คิด</span><span>${hasCost(m.unit_cost) ? `${unitCostFmt(m.unit_cost)} บาท/${esc(m.unit)}` : '<span class="danger-text">ยังไม่มี</span>'}</span></div>
-          ${main ? `<span class="small muted">คิดจาก ${esc(main.label)}</span>` : ''}
+          <div class="kv"><span class="muted">หน่วยที่สูตรใช้</span><span>${u}</span></div>
+          <div class="kv"><span class="muted">ต้นทุนที่ใช้คิด</span><span>${hasCost(m.unit_cost) ? `${unitCostFmt(m.unit_cost)} บาท/${u}` : '<span class="danger-text">ยังไม่มี</span>'}</span></div>
+          ${main ? `<span class="small muted">คิดจากราคาล่าสุดของ ${esc(main.label)}</span>` : ''}
           ${m.note ? `<p class="small pre" style="margin:0">${esc(m.note)}</p>` : ''}
         </section>
         <h2>ยี่ห้อและขนาดที่ซื้อ</h2>
         ${LB.sortByName(m.items, (i) => i.label).map((i) => `<button type="button" class="card tight link" data-item="${esc(i.id)}" style="text-align:left;font:inherit">
           <div class="row between"><span class="label grow">${esc(i.label)}</span>${i.id === m.main_item ? '<span class="badge ok">ใช้คิดต้นทุน</span>' : ''}${i.status !== 'active' ? '<span class="badge outline">เลิกซื้อ</span>' : ''}</div>
-          <span class="small muted">${esc(i.id)} · ${esc(itemSpec(i, m.unit))}${hasCost(i.unit_cost) ? ` · ${unitCostFmt(i.unit_cost)} บาท/${esc(m.unit)}` : ''}</span>
+          <span class="small muted">${esc(i.id)} · ${esc(itemSpec(i, m.unit))}${hasCost(i.unit_cost) ? ` · ${unitCostFmt(i.unit_cost)} บาท/${u}` : ''}</span>
           ${hasCost(i.unit_cost) ? '' : '<span class="small danger-text">ใส่ขนาดและราคาเพื่อคิดต้นทุน</span>'}
           ${i.note ? `<span class="small muted">${esc(i.note)}</span>` : ''}</button>`).join('') || '<p class="muted" style="margin:0">ยังไม่มียี่ห้อหรือขนาด</p>'}
         <button type="button" class="btn" data-add>${LB.icon('plus')}เพิ่มยี่ห้อหรือขนาด</button>
-        ${m.used_in.length ? `<section class="card tight"><span class="small muted">ใช้ในสูตร</span>${m.used_in.map((id) => `<a href="${recipeHref(id)}">${esc(pname(id))}</a>`).join('')}</section>`
-          : '<button type="button" class="btn danger" data-del>ลบวัตถุดิบนี้</button>'}
+        ${m.used_in.length ? `<section class="card tight"><span class="small muted">ใช้ในสูตร</span>${m.used_in.map((id) => `<a href="${recipeHref(id)}">${esc(pname(id))}</a>`).join('')}</section>` : ''}
+        ${!m.used_in.length && !m.tracked ? '<button type="button" class="btn danger" data-del>ลบวัตถุดิบนี้</button>' : ''}
       </div>`;
       const update = (list) => { mats = list; paint(); };
       root.querySelector('[data-edit]').onclick = () => materialSheet(m, '', (res) => {
@@ -647,4 +705,5 @@
       };
     }
   };
+  LB.kitchen = { KINDS, num, qtyFmt, priceFmt, unitCostFmt, hasCost, matHref, stockState, stockText, packOf };
 })();

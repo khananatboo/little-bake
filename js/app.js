@@ -22,6 +22,8 @@
     [/^#\/materials$/, 'materials', 'more'],
     [/^#\/material\/([^/]+)$/, 'material', 'more'],
     [/^#\/recipes$/, 'recipes', 'more'],
+    [/^#\/receive$/, 'receive', null],
+    [/^#\/count$/, 'count', null],
     [/^#\/recipe\/([^/]+)\/edit$/, 'recipeEdit', null],
     [/^#\/recipe\/([^/]+)$/, 'recipe', 'more'],
     [/^#\/settings$/, 'settings', null],
