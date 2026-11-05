@@ -20,6 +20,8 @@
   const matHref = (name) => '#/material/' + encodeURIComponent(name);
   const recipeHref = (id) => '#/recipe/' + encodeURIComponent(id);
   const secName = (n) => n || 'วัตถุดิบ';
+  /** "ลดหวาน (เวอร์ชัน 3)" หรือ "เวอร์ชัน 3" */
+  const verName = (label, ver) => (label ? `${label} (เวอร์ชัน ${ver})` : `เวอร์ชัน ${ver}`);
   const itemSpec = (i, unit) => `${i.pack_unit ? i.pack_unit + 'ละ ' : ''}${hasCost(i.pack_size) ? qtyFmt(i.pack_size) + ' ' + unit : 'ไม่ระบุขนาด'} · ${
     hasCost(i.price) ? priceFmt(i.price) + ' บาท' : 'ไม่มีราคา'}`;
 
@@ -349,31 +351,56 @@
   };
 
   function versionSheet(pid, p, r, ctx) {
+    const reopen = () => { const h = recipeHref(pid) + '?v=1'; if (location.hash === h) LB.reload(); else location.replace(h); };
     return async (ver) => {
       let v;
       try { v = await LB.busy(() => LB.api('recipes.version', { product_id: pid, version: ver })); } catch (e) { LB.error(e); return; }
       const c = LB.recipeCost({ ...v, product_id: pid }, ctx);
-      const s = LB.sheet('สูตรเวอร์ชัน ' + v.version, `
-        <p class="small muted" style="margin:0">บันทึก ${esc(LB.dateTimeTh(v.saved_at))} โดย ${esc(v.saved_by || '-')} · ทำ 1 ครั้งได้ ${qtyFmt(v.yield_qty)} ${esc(p.unit)}${
+      const current = v.version === r.version;
+      const s = LB.sheet(verName(v.label, v.version), `
+        <div class="field"><label for="vs-label">ชื่อเวอร์ชัน</label>
+          <div class="row"><input id="vs-label" class="input grow" value="${esc(v.label)}" maxlength="60" placeholder="เช่น สูตรปกติ ลดหวาน ใช้ฟิลลิ่ง">
+          <button type="button" class="btn" data-label>บันทึกชื่อ</button></div></div>
+        <p class="small muted" style="margin:0">${current ? '<span class="badge ok">สูตรที่ใช้อยู่</span> ' : ''}เวอร์ชัน ${v.version} · บันทึก ${esc(LB.dateTimeTh(v.saved_at))} โดย ${esc(v.saved_by || '-')} · ทำ 1 ครั้งได้ ${qtyFmt(v.yield_qty)} ${esc(p.unit)}${
           v.base_product ? ` · ใช้สูตร ${esc(pname(v.base_product))} × ${qtyFmt(v.base_factor)}` : ''}</p>
         ${c.sections.map((sec) => `<div class="stack tight"><h3>${esc(secName(sec.name))}</h3>${sec.choices.map((ch) => `${sec.alt ? `<span class="small muted">${esc(ch.name)}</span>` : ''}
           <span class="small">${ch.lines.map((l) => `${esc(l.material)} ${qtyFmt(l.qty)} ${esc(l.unit)}`).join(' · ')}</span>`).join('')}</div>`).join('')}
-        <p class="small muted" style="margin:0">ถ้าใช้สูตรนี้ ต้นทุนตามราคาวันนี้ ${costFmt(c.perUnit)} บาท/${esc(p.unit)}</p>
+        <p class="small muted" style="margin:0">ต้นทุนตามราคาวันนี้ ${costFmt(c.perUnit)} บาท/${esc(p.unit)}</p>
         ${v.steps ? `<details class="more-opts"><summary>วิธีทำ</summary><p class="pre small">${esc(v.steps)}</p></details>` : ''}
-        ${v.version !== r.version ? '<button type="button" class="btn" data-restore>กลับไปใช้สูตรเวอร์ชันนี้</button>' : '<span class="badge ok" style="align-self:flex-start">เวอร์ชันที่ใช้อยู่</span>'}`);
-      const rb = s.el.querySelector('[data-restore]');
-      if (!rb) return;
-      rb.onclick = async () => {
+        ${current ? '<span class="small muted">สูตรที่ใช้อยู่ลบไม่ได้ ถ้าจะลบ ให้เลือกเวอร์ชันอื่นเป็นสูตรหลักก่อน</span>' : `
+          <button type="button" class="btn solid" data-use>ใช้เวอร์ชันนี้เป็นสูตรหลัก</button>
+          ${v.used ? '<span class="small muted">เวอร์ชันนี้เคยใช้บันทึกการผลิต จึงลบไม่ได้ (เก็บไว้เป็นประวัติต้นทุน)</span>' : '<button type="button" class="btn danger" data-delv>ลบเวอร์ชันนี้</button>'}`}`);
+      s.el.querySelector('[data-label]').onclick = async () => {
         try {
-          const res = await LB.busy(() => LB.api('recipes.save', {
-            product_id: pid, yield_qty: v.yield_qty, base_product: v.base_product, base_factor: v.base_factor,
-            steps: v.steps, note: v.note, lines: v.lines, expect_version: r.version
-          }));
+          const res = await LB.busy(() => LB.api('recipes.versionLabel', { product_id: pid, version: v.version, label: s.el.querySelector('#vs-label').value }));
           s.close();
-          LB.toast(`กลับไปใช้สูตรเวอร์ชัน ${v.version} แล้ว (บันทึกเป็นเวอร์ชัน ${res.version})`);
-          LB.reload();
+          LB.toast(res.label ? `ตั้งชื่อเป็น "${res.label}" แล้ว` : 'ลบชื่อเวอร์ชันแล้ว');
+          reopen();
         } catch (e) { LB.error(e); }
       };
+      const ub = s.el.querySelector('[data-use]');
+      if (ub) {
+        ub.onclick = async () => {
+          try {
+            await LB.busy(() => LB.api('recipes.useVersion', { product_id: pid, version: v.version, expect_version: r.version }));
+            s.close();
+            LB.toast(`ใช้${verName(v.label, v.version)}เป็นสูตรหลักแล้ว`);
+            reopen();
+          } catch (e) { LB.error(e); }
+        };
+      }
+      const db = s.el.querySelector('[data-delv]');
+      if (db) {
+        db.onclick = async () => {
+          if (!(await LB.confirm('ลบเวอร์ชันนี้?', `${verName(v.label, v.version)} จะหายไปถาวร`, 'ลบ', true))) return;
+          try {
+            await LB.busy(() => LB.api('recipes.versionDelete', { product_id: pid, version: v.version }));
+            s.close();
+            LB.toast('ลบเวอร์ชันแล้ว');
+            reopen();
+          } catch (e) { LB.error(e); }
+        };
+      }
     };
   }
 
@@ -401,9 +428,11 @@
       <div class="stack" data-body></div>
       ${r.steps ? `<section class="card"><h2>วิธีทำ</h2><p class="pre" style="margin:0">${esc(r.steps)}</p></section>` : ''}
       ${r.note ? `<section class="card tight"><span class="small muted">หมายเหตุ</span><p class="pre" style="margin:0">${esc(r.note)}</p></section>` : ''}
-      <details class="more-opts"><summary>ประวัติการแก้สูตร (${data.versions.length} เวอร์ชัน)</summary>
+      <details class="more-opts" ${query.v ? 'open' : ''}><summary>เวอร์ชันของสูตร (${data.versions.length}) ตั้งชื่อ เลือกใช้ หรือลบ</summary>
         <div class="stack tight" style="margin-top:8px">${data.versions.map((v) => `<button type="button" class="card tight link row" data-ver="${v.version}" style="text-align:left;font:inherit">
-          <span class="grow">เวอร์ชัน ${v.version}${v.version === r.version ? ' · ใช้อยู่' : ''}<br><span class="small muted">${esc(LB.dateTimeTh(v.saved_at))} · ${esc(v.saved_by || '-')}</span></span>${LB.icon('chevron')}</button>`).join('')}</div></details>
+          <span class="grow stack tight" style="gap:0"><span class="label">${esc(v.label || 'เวอร์ชัน ' + v.version)}</span>
+          <span class="small muted">${v.label ? 'เวอร์ชัน ' + v.version + ' · ' : ''}${esc(LB.dateTimeTh(v.saved_at))} · ${esc(v.saved_by || '-')}</span></span>
+          ${v.version === r.version ? '<span class="badge ok">ใช้อยู่</span>' : ''}${LB.icon('chevron')}</button>`).join('')}</div></details>
     </div>`;
     const sumEl = root.querySelector('[data-sum]');
     const bodyEl = root.querySelector('[data-body]');
@@ -416,7 +445,7 @@
       const k = want > 0 ? want / c.yieldQty : 1;
       const alts = c.sections.filter((s) => s.choices.length > 1);
       sumEl.innerHTML = `<section class="card">
-          <div class="row between small muted"><span>ทำ 1 ครั้งได้ ${qtyFmt(c.yieldQty)} ${esc(p.unit)}</span><span>สูตรเวอร์ชัน ${r.version} · ${esc(LB.dateShort(r.updated_at))}</span></div>
+          <div class="row between small muted"><span>ทำ 1 ครั้งได้ ${qtyFmt(c.yieldQty)} ${esc(p.unit)}</span><span>${esc(verName(r.version_label, r.version))}</span></div>
           <div class="grid3">
             <div class="stack tight" style="gap:0"><span class="small muted">ต้นทุน/${esc(p.unit)}</span><span class="num" style="font-size:20px">${costFmt(c.perUnit)}</span></div>
             <div class="stack tight" style="gap:0"><span class="small muted">ราคาขาย</span><span class="num" style="font-size:20px">${LB.money(price)}</span></div>
@@ -513,6 +542,8 @@
       <div class="field"><label for="re-steps">วิธีทำ</label><textarea id="re-steps" class="input" rows="6" data-k="steps" maxlength="8000" placeholder="เขียนเป็นข้อ ๆ ได้">${esc(st.steps)}</textarea></div>
       <div class="field"><label for="re-note">หมายเหตุ</label><textarea id="re-note" class="input" rows="2" data-k="note" maxlength="1000">${esc(st.note)}</textarea></div>
       <section class="card tight" data-total></section>
+      <div class="field"><label for="re-vlabel">ชื่อเวอร์ชันนี้ (ไม่บังคับ)</label><input id="re-vlabel" class="input" maxlength="60" placeholder="เช่น สูตรปกติ ลดหวาน ใช้ฟิลลิ่ง">
+        <span class="hint">${r ? 'บันทึกแล้วจะเป็นเวอร์ชันใหม่และใช้เป็นสูตรหลัก เวอร์ชันเดิมยังเก็บไว้ เลือกกลับมาใช้ได้' : 'ตั้งชื่อไว้ จะเลือกใช้ได้ง่ายเมื่อมีหลายเวอร์ชัน'}</span></div>
       <button type="submit" class="btn primary">${r ? 'บันทึกเป็นสูตรเวอร์ชันใหม่' : 'บันทึกสูตร'}</button>
       ${r ? '<button type="button" class="btn danger" data-del>ลบสูตรนี้</button>' : ''}
     </form>`;
@@ -686,9 +717,9 @@
         const res = await LB.busy(() => LB.api('recipes.save', {
           product_id: pid, yield_qty: String(st.yield_qty).replace(/,/g, ''), base_product: st.base_product,
           base_factor: st.base_product ? String(st.base_factor).replace(/,/g, '') : '', steps: st.steps, note: st.note,
-          lines: toLines(st), expect_version: r ? r.version : ''
+          lines: toLines(st), expect_version: r ? r.version : '', version_label: root.querySelector('#re-vlabel').value
         }));
-        LB.toast(res.unchanged ? 'สูตรเหมือนเดิม ไม่ได้สร้างเวอร์ชันใหม่' : `บันทึกสูตรแล้ว (เวอร์ชัน ${res.version})`);
+        LB.toast(res.unchanged ? 'สูตรเหมือนเดิม ไม่ได้สร้างเวอร์ชันใหม่' : `บันทึกสูตรแล้ว (${verName(res.version_label, res.version)})`);
         LB.back(recipeHref(pid));
       } catch (err2) { LB.error(err2); }
     });
