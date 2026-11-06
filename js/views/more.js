@@ -9,6 +9,8 @@
       <span class="grow stack tight" style="gap:0"><span class="label" style="font-size:16px">${title}</span>${sub ? `<span class="small muted">${sub}</span>` : ''}</span>${LB.icon('chevron')}</a>`;
     root.innerHTML = `${LB.topbar('เพิ่มเติม')}<div class="page">
       ${link('#/report', 'chart', 'สรุปยอดขาย', 'วันนี้ เดือนนี้ ไตรมาส ปี')}
+      ${link('#/profit', 'wallet', 'กำไรขาดทุน', 'ยอดขาย ต้นทุน ค่าใช้จ่าย กำไรสุทธิ รายเมนู')}
+      ${link('#/expenses', 'receipt', 'ค่าใช้จ่ายร้าน', 'ค่าแก๊ส ค่าไฟ ค่าเช่า ค่าแรง และอื่น ๆ')}
       ${link('#/sale', 'cart', 'ขายหน้าร้าน', 'ขายของในตู้ที่ไม่ได้จองล่วงหน้า')}
       ${link('#/products', 'tag', 'เมนูและราคา', LB.state.products.filter((p) => p.status === 'active').length + ' เมนูที่เปิดขาย')}
       ${link('#/recipes', 'book', 'สูตรและต้นทุน', 'ต้นทุนต่อชิ้นและส่วนต่างของแต่ละเมนู')}
@@ -52,10 +54,17 @@
     if (key === 'today') return [t, t];
     if (key === '7d') return [LB.addDays(t, -6), t];
     if (key === 'month') return [`${y}-${String(m).padStart(2, '0')}-01`, t];
+    if (key === 'lastmonth') {
+      const py = m === 1 ? y - 1 : y;
+      const pm = m === 1 ? 12 : m - 1;
+      return [`${py}-${String(pm).padStart(2, '0')}-01`, `${py}-${String(pm).padStart(2, '0')}-${String(new Date(Date.UTC(py, pm, 0)).getUTCDate()).padStart(2, '0')}`];
+    }
     if (key === 'quarter') { const qm = Math.floor((m - 1) / 3) * 3 + 1; return [`${y}-${String(qm).padStart(2, '0')}-01`, t]; }
     if (key === 'year') return [`${y}-01-01`, t];
     return [t, t];
   }
+
+  LB.presetRange = presetRange;
 
   LB.views.report = async (root, params, query, alive) => {
     let preset = query.p || 'month';
