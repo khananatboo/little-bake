@@ -47,7 +47,7 @@
               <span class="num nowrap" style="font-size:16px">ขายได้ ${Math.max(0, x.free)} ${esc(x.unit)}</span></div>
               <span class="small ${warn ? 'danger-text' : 'muted'}">ในตู้ ${x.physical}${x.committed ? ` · จองแล้ว ${x.committed}` : ''}${x.nearestExpiry ? ` · หมดอายุ ${esc(LB.dateTh(x.nearestExpiry))}` : ''}${x.expired ? ` · หมดอายุแล้ว ${x.expired}` : ''}</span></div>`;
           }).join('') : '<p class="muted" style="margin:0">ยังไม่มีของในตู้</p>'}
-          ${d.stock.some((x) => x.free > 0) ? `<a class="btn solid" href="#/sale">${LB.icon('cart')}ขายหน้าร้าน</a>` : ''}
+          <a class="btn solid" href="#/sale">${LB.icon('cart')}ขายหน้าร้าน</a>
         </section>
 
         ${d.rounds.length ? d.rounds.map((r) => `<section class="card">

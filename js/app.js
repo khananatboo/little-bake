@@ -68,6 +68,7 @@
     }
     if (!match) { location.replace('#/home'); return; }
     nav(match.tab);
+    document.body.classList.toggle('wide', match.view === 'sale');
     const seq = ++renderSeq;
     const host = document.getElementById('view');
     const root = document.createElement('div');

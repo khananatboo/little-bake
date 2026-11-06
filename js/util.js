@@ -4,7 +4,7 @@
   const LB = (window.LB = window.LB || {});
   LB.views = LB.views || {};
   /** เวอร์ชันหน้าแอป (ฐานข้อมูลมีเลขเวอร์ชันของตัวเอง) */
-  LB.APP_VERSION = '2.6.1';
+  LB.APP_VERSION = '2.7.0';
 
   LB.esc = (s) => String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, (c) => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -99,6 +99,9 @@
     box: '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7 12 12l8.7-5"/><path d="M12 22V12"/>',
     chevron: '<path d="M9 18l6-6-6-6"/>',
     check: '<path d="M20 6 9 17l-5-5"/>',
+    expand: '<path d="M4 9V4h5"/><path d="M20 9V4h-5"/><path d="M4 15v5h5"/><path d="M20 15v5h-5"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    alert: '<path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4"/><path d="M12 17v.01"/>',
     map: '<path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>'
   };
   LB.icon = (name, cls) => `<svg class="icon ${cls || ''}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name] || ''}</svg>`;

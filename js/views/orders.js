@@ -114,6 +114,7 @@
     };
   };
 
+  LB.deliverSheet = (o, onDone) => deliverSheet(o, onDone);
   function deliverSheet(o, onDone) {
     const ship = o.handover !== 'pickup';
     const s = LB.sheet('ส่งมอบ ' + o.id, `
@@ -125,8 +126,11 @@
       <div class="field"><label for="dl-amt">รับเงินตอนส่งมอบ (บาท)</label>
       <input id="dl-amt" class="input" type="text" inputmode="decimal" value="${esc(o.balance)}"></div>
       <div class="field"><span class="label">ช่องทาง</span>${payMethodHtml('method', 'cash')}</div>
+      <button type="button" class="btn" data-qr hidden>${LB.icon('qr')}แสดง QR ยอดนี้</button>
       <button type="button" class="btn primary" data-save>ยืนยันส่งมอบ</button>`);
-    LB.bindChoice(s.el, '.seg');
+    const qrBtn = s.el.querySelector('[data-qr]');
+    LB.bindChoice(s.el, '.seg', (n, v) => { qrBtn.hidden = v !== 'promptpay'; });
+    qrBtn.onclick = () => LB.openPayQr(o, LB.n(s.el.querySelector('#dl-amt').value), 'QR รับเงิน ' + o.id);
     const shipIn = s.el.querySelector('#dl-ship');
     if (shipIn) {
       shipIn.addEventListener('input', () => {
