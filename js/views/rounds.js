@@ -53,7 +53,7 @@
           }).join('')}
         </section>
         <div class="field"><label for="rf-note">หมายเหตุ</label><input id="rf-note" class="input" value="${esc(existing ? existing.note : '')}" maxlength="300"></div>
-        <section class="card tight row between"><span class="small muted">ถ้าขายครบทั้งรอบ</span><span class="num money" style="font-size:20px" data-pot></span></section>
+        <section class="card tight row between"><span class="small muted">ถ้าขายครบทั้งรอบ</span><span class="num money" style="font-size:22px" data-pot></span></section>
         <button class="btn primary" type="submit">${editId ? 'บันทึก' : 'เปิดรอบ'}</button>
       </form>`;
     const form = root.querySelector('[data-form]');

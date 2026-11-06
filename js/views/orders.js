@@ -12,7 +12,7 @@
     let money;
     if (o.status === 'cancelled') money = o.refund ? `คืนเงิน ${LB.baht(o.refund)}` : 'ไม่คืนเงิน';
     else if (o.status === 'pending_deposit') money = `<span class="danger-text">ยังไม่ได้รับมัดจำ ${LB.baht(LB.n(o.deposit_due) - LB.n(o.paid))}</span>`;
-    else if (o.balance > 0) money = o.paid > 0 ? `จ่ายแล้ว ${LB.money(o.paid)} · ค้าง ${LB.baht(o.balance)}` : (o.status === 'delivered' ? `<span class="danger-text">ค้างชำระ ${LB.baht(o.balance)}</span>` : 'ชำระวันรับ');
+    else if (o.balance > 0) money = o.paid > 0 ? `จ่ายแล้ว ${LB.baht(o.paid)} · ค้าง ${LB.baht(o.balance)}` : (o.status === 'delivered' ? `<span class="danger-text">ค้างชำระ ${LB.baht(o.balance)}</span>` : 'ชำระวันรับ');
     else money = 'ชำระครบ';
     return `<a class="card tight link" href="#/order/${esc(o.id)}">
       <div class="row between"><span class="label grow">${esc(o.customer_name)} <span class="small muted" style="font-weight:400">· ${esc(LB.L.channel[o.channel] || '')}</span></span>
@@ -31,7 +31,7 @@
     const counts = {};
     list.forEach((o) => { counts[o.status] = (counts[o.status] || 0) + 1; });
     root.innerHTML = `${LB.topbar('ออเดอร์')}<div class="page">
-      <div class="chips" data-filters>${FILTERS.map(([k, label]) => `<button type="button" class="chip" data-f="${k}" aria-pressed="${k === filter}">${label} ${k === 'all' ? list.length : (counts[k] || 0)}</button>`).join('')}</div>
+      <div class="chips scroll" data-filters>${FILTERS.map(([k, label]) => { const c = k === 'all' ? list.length : (counts[k] || 0); return `<button type="button" class="chip" data-f="${k}" aria-pressed="${k === filter}">${label}${c ? ` <span class="count">${c}</span>` : ''}</button>`; }).join('')}</div>
       <input class="input" type="search" placeholder="ค้นหาชื่อลูกค้า เมนู หรือเลขออเดอร์" aria-label="ค้นหาออเดอร์" data-q>
       <div class="stack" data-list></div></div>
       <a class="fab" href="#/orders/new">${LB.icon('plus')}ออเดอร์ใหม่</a>`;
@@ -43,15 +43,15 @@
       const groups = [];
       const byKey = {};
       rows.forEach((o) => {
-        let key, title;
+        let key, title, stamp = false;
         if (!LB.ACTIVE.includes(o.status)) { key = 'z-' + o.status; title = LB.L.status[o.status] + ' (60 วันล่าสุด)'; }
-        else if (o.round_id) { key = 'a-' + o.round_bake_date + o.round_id; title = 'รอบผลิต ' + LB.dateTh(o.round_bake_date); }
+        else if (o.round_id) { key = 'a-' + o.round_bake_date + o.round_id; title = 'รอบผลิต ' + LB.dateTh(o.round_bake_date); stamp = true; }
         else { key = 'b-ready'; title = 'จองจากของพร้อมขาย'; }
-        if (!byKey[key]) { byKey[key] = { key, title, rows: [] }; groups.push(byKey[key]); }
+        if (!byKey[key]) { byKey[key] = { key, title, stamp, rows: [] }; groups.push(byKey[key]); }
         byKey[key].rows.push(o);
       });
       groups.sort((a, b) => (a.key < b.key ? -1 : 1));
-      listEl.innerHTML = groups.map((g) => `<h2 class="small muted" style="font-family:var(--font-body);font-weight:500;margin-top:4px">${esc(g.title)}</h2>${g.rows.map(orderCard).join('')}`).join('');
+      listEl.innerHTML = groups.map((g) => `<h2 class="small muted" style="font-family:var(--font-body);font-weight:500;margin-top:4px">${g.stamp ? LB.stamp(g.title) : esc(g.title)}</h2>${g.rows.map(orderCard).join('')}`).join('');
     };
     paint();
     root.querySelector('[data-filters]').addEventListener('click', (e) => {
@@ -191,7 +191,7 @@
       root.innerHTML = `${LB.topbar(o.id, '#/orders', active ? `<a class="icon-btn" href="#/order/${esc(o.id)}/edit" aria-label="แก้ไขออเดอร์">${LB.icon('edit')}</a>` : '')}
       <div class="page">
         <div class="row wrap">${LB.badge(o.status)}<span class="badge outline">${esc(LB.L.kind[o.kind])}</span>
-          ${o.round ? `<a class="small" href="#/round/${esc(o.round.id)}">รอบผลิต ${esc(LB.dateTh(o.round.bake_date))}</a>` : ''}</div>
+          ${o.round ? LB.stamp('รอบผลิต ' + LB.dateTh(o.round.bake_date), '#/round/' + o.round.id) : ''}</div>
         <section class="card">
           <div class="row between top"><div class="stack tight" style="gap:0"><h2>${esc(o.customer_name)}</h2>
             <span class="small muted">สั่งผ่าน ${esc(LB.L.channel[o.channel] || '')}</span></div>
@@ -202,7 +202,7 @@
         </section>
         <section class="card">
           <table class="data"><thead><tr><th>เมนู</th><th class="r">จำนวน</th><th class="r">รวม</th></tr></thead><tbody>
-          ${o.items.map((i) => `<tr><td>${esc(i.product_name)}<div class="small muted">${LB.money(i.price)} บาท</div></td><td class="r">${i.qty} ${esc(i.unit || '')}</td><td class="r">${LB.money(i.qty * i.price)}</td></tr>`).join('')}
+          ${o.items.map((i) => `<tr><td>${esc(i.product_name)}<div class="small muted">${LB.money(i.price)} บาท</div></td><td class="r">${i.qty} ${esc(i.unit || '')}</td><td class="r">${LB.baht(i.qty * i.price)}</td></tr>`).join('')}
           </tbody></table>
           <div class="stack tight">
             <div class="kv"><span>ค่าขนม</span><span>${LB.baht(o.subtotal)}</span></div>
@@ -210,7 +210,7 @@
             ${LB.n(o.shipping_fee) ? `<div class="kv"><span>ค่าส่ง</span><span>${LB.baht(o.shipping_fee)}</span></div>` : (o.handover !== 'pickup' ? '<div class="kv"><span>ค่าส่ง</span><span class="muted">ตามจริง</span></div>' : '')}
             ${LB.n(o.tip) ? `<div class="kv"><span>ทิป</span><span>+${LB.baht(o.tip)}</span></div>` : ''}
             <div class="kv total"><span>รวม</span><span>${LB.baht(LB.n(o.total) + LB.n(o.shipping_fee) + LB.n(o.tip))}</span></div>
-            ${o.kind === 'deposit' ? `<div class="kv"><span>มัดจำ ${esc(LB.state.settings.deposit_percent)}%</span><span>${LB.baht(o.deposit_due)} ${o.depositPaid ? '✓' : ''}</span></div>` : ''}
+            ${o.kind === 'deposit' ? `<div class="kv"><span>มัดจำ ${esc(LB.state.settings.deposit_percent)}%</span><span class="row" style="gap:4px">${LB.baht(o.deposit_due)}${o.depositPaid ? `${LB.icon('check', 'ok-icon')}<span class="sr-only">จ่ายแล้ว</span>` : ''}</span></div>` : ''}
             <div class="kv"><span>จ่ายแล้ว</span><span>${LB.baht(o.paid)}</span></div>
             ${o.status !== 'cancelled' ? `<div class="kv total"><span>ค้างชำระ</span><span class="${o.balance > 0 ? 'money' : ''}">${LB.baht(o.balance)}</span></div>` : `<div class="kv"><span>คืนเงิน</span><span>${LB.baht(o.refund)}</span></div>`}
           </div>

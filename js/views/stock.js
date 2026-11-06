@@ -223,7 +223,7 @@
     root.innerHTML = `${LB.topbar(only ? 'นับสต็อก ' + only : 'นับสต็อก', back)}<form class="page no-nav" data-form novalidate>
       <p class="small muted" style="margin:0">ใส่จำนวนที่มีอยู่จริงเฉพาะรายการที่นับ ช่องที่เว้นว่างจะไม่เปลี่ยน ระบบจะปรับยอดให้ตรงกับที่นับ ของที่หมดอายุและทิ้งไปแล้วไม่ต้องนับรวม</p>
       ${only ? '' : `<input class="input" type="search" data-q placeholder="ค้นหาชื่อ" aria-label="ค้นหาวัตถุดิบ">
-      <div class="chips" data-chips>${[['all', 'ทั้งหมด'], ...kinds.map((k) => [k, k])].map(([k, l]) => `<button type="button" class="chip" data-f="${esc(k)}" aria-pressed="${k === filter}">${esc(l)}</button>`).join('')}</div>`}
+      <div class="chips scroll" data-chips>${[['all', 'ทั้งหมด'], ...kinds.map((k) => [k, k])].map(([k, l]) => `<button type="button" class="chip" data-f="${esc(k)}" aria-pressed="${k === filter}">${esc(l)}</button>`).join('')}</div>`}
       ${list.map((m) => `<section class="card tight" data-m="${esc(m.name)}" data-kind="${esc(m.kind)}">
         <div class="row between top"><span class="label grow">${esc(m.name)}</span><span class="small muted right">${m.tracked
           ? 'ในระบบ ' + esc(stockText(m)) + (LB.n(m.expired) ? `<br><span class="danger-text">หมดอายุแล้ว ${qtyFmt(m.expired)} ${esc(m.unit)}</span>` : '') : 'ยังไม่เคยนับ'}</span></div>

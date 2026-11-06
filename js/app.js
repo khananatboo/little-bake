@@ -106,7 +106,7 @@
     host.innerHTML = `<div class="auth">${html}</div>`;
     return host.firstElementChild;
   }
-  const logoImg = '<img class="logo" src="icons/logo-512.png" alt="โลโก้ Little Bake">';
+  const logoImg = '<img class="logo" src="icons/logo-512.png" alt="โลโก้ little bake.">';
 
   /** บทบาทของ key แบบเก่า (JWT) ใช้กันวาง service_role key ในแอป */
   function keyRole(k) {

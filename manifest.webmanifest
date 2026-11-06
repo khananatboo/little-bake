@@ -1,7 +1,7 @@
 {
-  "name": "Little Bake",
-  "short_name": "Little Bake",
-  "description": "รับ pre-order รอบผลิต และสรุปยอดของร้าน Little Bake",
+  "name": "little bake.",
+  "short_name": "little bake.",
+  "description": "รับพรีออเดอร์ รอบผลิต และสรุปยอดของร้าน little bake.",
   "lang": "th",
   "start_url": "./#/home",
   "scope": "./",

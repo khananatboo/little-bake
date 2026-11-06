@@ -16,7 +16,7 @@
 
   LB.msgRound = (round) => {
     const s = settings();
-    const lines = [`${s.shop_name || 'Little Bake'} เปิดรอบผลิต ${LB.dateTh(round.bake_date)}`];
+    const lines = [`${s.shop_name || 'little bake.'} เปิดรอบผลิต ${LB.dateTh(round.bake_date)}`];
     round.items.forEach((i) => {
       const left = i.max_qty - i.ordered;
       const tail = left <= 0 ? 'เต็มแล้ว' : (i.ordered > 0 ? `เหลือ ${left} ${i.unit}` : `รับ ${i.max_qty} ${i.unit}`);
@@ -63,7 +63,7 @@
       lines.push('');
       lines.push(`ยกเลิกก่อนวันรับ ${s.refund_days || 7} วันขึ้นไปคืนเงินเต็มจำนวน หากน้อยกว่านั้นขอสงวนสิทธิ์ไม่คืนเงิน${p}`);
     }
-    lines.push(`ขอบคุณที่สั่งขนม ${s.shop_name || 'Little Bake'} ${p}`);
+    lines.push(`ขอบคุณที่สั่งขนม ${s.shop_name || 'little bake.'} ${p}`);
     return lines.join('\n');
   };
 
@@ -231,7 +231,7 @@
     ctx.textAlign = 'center';
     ctx.fillStyle = C.caramel;
     ctx.font = `600 44px ${DISPLAY}`;
-    ctx.fillText(s.shop_name || 'Little Bake', W / 2, 112);
+    ctx.fillText(s.shop_name || 'little bake.', W / 2, 112);
     ctx.fillStyle = C.ink;
     ctx.font = `500 30px ${DISPLAY}`;
     ctx.fillText('สแกนจ่ายด้วย PromptPay', W / 2, 162);

@@ -20,7 +20,7 @@
       <button type="button" class="card tight link row" data-pin style="text-align:left;font:inherit">${LB.icon('lock')}<span class="grow label" style="font-size:16px">เปลี่ยน PIN</span>${LB.icon('chevron')}</button>
       <button type="button" class="card tight link row" data-others style="text-align:left;font:inherit">${LB.icon('lock')}<span class="grow stack tight" style="gap:0"><span class="label" style="font-size:16px">ล็อกเครื่องอื่นทั้งหมด</span><span class="small muted">ใช้เมื่อมือถือหรือแท็บเล็ตหาย</span></span></button>
       <button type="button" class="card tight link row" data-logout style="text-align:left;font:inherit">${LB.icon('logout')}<span class="grow label" style="font-size:16px">ออกจากระบบ</span></button>
-      <p class="small muted" style="margin:0">ผู้ใช้: ${esc(LB.state.user.name)} · ${esc((LB.session() || {}).email || '')} · Little Bake เวอร์ชัน ${esc(LB.APP_VERSION)}${LB.state.version !== LB.APP_VERSION ? ` (ฐานข้อมูล ${esc(LB.state.version)})` : ''}</p>
+      <p class="small muted" style="margin:0">ผู้ใช้: ${esc(LB.state.user.name)} · ${esc((LB.session() || {}).email || '')} · little bake. เวอร์ชัน ${esc(LB.APP_VERSION)}${LB.state.version !== LB.APP_VERSION ? ` (ฐานข้อมูล ${esc(LB.state.version)})` : ''}</p>
     </div>`;
     root.querySelector('[data-lock]').onclick = () => LB.lockApp();
     root.querySelector('[data-others]').onclick = async () => {
@@ -114,7 +114,7 @@
           <div class="bar"><span class="${vatPct >= 80 ? 'b' : 'a'}" style="width:${vatPct}%"></span></div></section>`;
     };
     root.innerHTML = `${LB.topbar('สรุปยอดขาย', '#/more')}<div class="page">
-      <div class="chips" data-presets>${[['today', 'วันนี้'], ['7d', '7 วัน'], ['month', 'เดือนนี้'], ['quarter', 'ไตรมาสนี้'], ['year', 'ปีนี้'], ['custom', 'กำหนดเอง']]
+      <div class="chips scroll" data-presets>${[['today', 'วันนี้'], ['7d', '7 วัน'], ['month', 'เดือนนี้'], ['quarter', 'ไตรมาสนี้'], ['year', 'ปีนี้'], ['custom', 'กำหนดเอง']]
         .map(([k, l]) => `<button type="button" class="chip" data-p="${k}" aria-pressed="${k === preset}">${l}</button>`).join('')}</div>
       <div class="grid2" data-custom ${preset === 'custom' ? '' : 'hidden'}>
         <div class="field"><label for="rp-from">ตั้งแต่</label><input id="rp-from" class="input" type="date" value="${from}"></div>
@@ -164,7 +164,7 @@
         <div class="kv"><span>ค่าขนม</span><span data-sub>0 บาท</span></div>
         <div class="kv" data-disc-row hidden><span>ส่วนลด</span><span data-disc>0 บาท</span></div>
         <div class="kv" data-tip-row hidden><span>ทิป</span><span data-tip>0 บาท</span></div>
-        <div class="kv total"><span>รับเงินรวม</span><span class="num money" style="font-size:20px" data-total>0 บาท</span></div>
+        <div class="kv total"><span>รับเงินรวม</span><span class="num money" style="font-size:22px" data-total>0 บาท</span></div>
       </section>
       <button class="btn primary" type="submit" data-submit>บันทึกการขาย</button>` : ''}</form>`;
     const form = root.querySelector('[data-form]');

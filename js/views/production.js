@@ -291,15 +291,15 @@
     const paint = () => {
       const shelf = plan && plan.items.length ? products[plan.items[0].product_id] : null;
       root.innerHTML = `${LB.topbar('บันทึกการผลิต')}<div class="page">
-        ${stock.rounds.length ? `<div class="chips" data-rounds>${stock.rounds.map((r) => `<button type="button" class="chip soft" data-r="${esc(r.id)}" aria-pressed="${r.id === roundId}">รอบ ${esc(LB.dateTh(r.bake_date))}</button>`).join('')}</div>` : ''}
+        ${stock.rounds.length ? `<div class="chips scroll" data-rounds>${stock.rounds.map((r) => `<button type="button" class="chip soft" data-r="${esc(r.id)}" aria-pressed="${r.id === roundId}">รอบ ${esc(LB.dateTh(r.bake_date))}</button>`).join('')}</div>` : ''}
         ${plan ? `<p class="small muted" style="margin:0">รอบ ${esc(LB.dateTh(plan.bake_date))} · ${esc(LB.L.roundState[plan.state])}${shelf ? ` · ผลิตวันนี้หมดอายุ ${esc(LB.dateTh(LB.addDays(LB.today(), LB.n(shelf.shelf_days))))}` : ''}</p>
           ${plan.items.map((i) => `<section class="card" data-item="${esc(i.product_id)}">
             <h2>${esc(i.name)}</h2>
             <div class="grid3" style="text-align:center">
-              <div class="tile" style="padding:8px;background:var(--surface)"><span class="small muted">จองแล้ว</span><span class="num">${i.ordered}${i.pending ? `<span class="small muted"> (รอมัดจำ ${i.pending})</span>` : ''}</span></div>
-              <div class="tile" style="padding:8px;background:var(--surface)"><label class="small muted" for="ex-${esc(i.product_id)}">เผื่อขาย</label>
-                <input id="ex-${esc(i.product_id)}" class="num" data-extra type="text" inputmode="numeric" value="${i.extra_qty}" style="width:100%;border:0;border-bottom:1px solid var(--line-strong);background:transparent;text-align:center;font-size:20px"></div>
-              <div class="tile" style="padding:8px;background:var(--cheesecake);border-color:var(--cheesecake)"><span class="small">ต้องอบเพิ่ม</span><span class="num" style="font-weight:600">${i.toBake}</span></div>
+              <div class="tile stat"><span class="small muted">จองแล้ว</span><span class="num">${i.ordered}</span>${i.pending ? `<span class="small muted">รอมัดจำ ${i.pending}</span>` : ''}</div>
+              <div class="tile stat"><label class="small muted" for="ex-${esc(i.product_id)}">เผื่อขาย</label>
+                <input id="ex-${esc(i.product_id)}" class="num" data-extra type="text" inputmode="numeric" value="${i.extra_qty}" style="width:100%;border:0;border-bottom:1px solid var(--line-strong);background:transparent;text-align:center;font-size:22px;line-height:28px"></div>
+              <div class="tile stat key"><span class="small">ต้องอบเพิ่ม</span><span class="num" style="font-weight:600">${i.toBake}</span></div>
             </div>
             ${i.produced ? `<span class="small muted">อบแล้ว ${i.produced} ${esc(i.unit)} · ส่งมอบแล้ว ${i.delivered}</span>` : ''}
             ${(i.batches || []).map((b) => `<button type="button" class="row between small" data-cost="${esc(b.id)}" style="border:0;border-top:1px solid var(--line);background:none;padding:8px 0 0;text-align:left;cursor:pointer;width:100%;font:inherit;color:inherit">
@@ -307,7 +307,7 @@
               <span>${b.unit_cost !== null ? `ต้นทุน <span class="num">${costFmt(b.unit_cost)}</span> บาท/${esc(i.unit)}` : ''}${b.cost_missing ? ' <span class="danger-text">ต้นทุนไม่ครบ</span>' : ''}${b.shorts ? ` <span class="danger-text">· ขาดในระบบ ${b.shorts} รายการ</span>` : ''}</span></span>${LB.icon('chevron')}</button>`).join('')}
             <div class="row"><label class="label grow" for="bk-${esc(i.product_id)}">อบเสร็จ (${esc(i.unit)})</label>
               <input id="bk-${esc(i.product_id)}" class="input" data-baked type="text" inputmode="numeric" value="${i.toBake || ''}" placeholder="0" style="width:84px;text-align:center">
-              <button type="button" class="btn primary" data-record style="min-height:44px;font-size:14px">บันทึก</button></div>
+              <button type="button" class="btn" data-record style="font-weight:600">บันทึก</button></div>
           </section>`).join('')}` : '<div class="empty">ยังไม่มีรอบผลิต <a href="#/rounds/new">เปิดรอบผลิต</a></div>'}
         <button type="button" class="btn" data-extra-record>${LB.icon('plus')}บันทึกการผลิตนอกรอบ</button>
         <p class="hint" style="margin:-8px 0 0">บันทึกแล้ว ระบบเพิ่มของในตู้ ตั้งวันหมดอายุตามอายุขายของเมนู และตัดวัตถุดิบตามสูตรให้อัตโนมัติ</p>
@@ -320,7 +320,7 @@
             <span class="small muted">จองแล้ว ${x.committed} · ขายได้ ${Math.max(0, x.free)}${x.free < 0 ? ` · <span class="danger-text">ขาด ${-x.free}</span>` : ''}</span>
             ${x.batches.map((b) => `<button type="button" class="row between" data-batch="${esc(b.id)}" data-pid="${esc(x.product_id)}" style="border:0;border-top:1px solid var(--line);background:none;padding:8px 0 0;text-align:left;cursor:pointer;width:100%">
               <span class="small grow">ผลิต ${esc(LB.dateShort(b.produced_date))} · เหลือ ${b.remaining}${LB.n(b.discount_price) ? ` · ลดเหลือ ${LB.money(b.discount_price)}` : ''}</span>
-              ${b.state === 'expired' ? LB.badge('expired', 'หมดอายุแล้ว') : (b.state === 'warn' ? LB.badge('warn', 'หมดอายุ ' + LB.relDay(b.expire_date)) : `<span class="small muted">หมดอายุ ${esc(LB.dateShort(b.expire_date))}</span>`)}
+              ${b.state === 'expired' ? LB.badge('expired', 'หมดอายุแล้ว') : (b.state === 'warn' ? LB.badge('warn', 'หมดอายุ ' + LB.relDay(b.expire_date)) : LB.stamp('หมดอายุ ' + LB.dateShort(b.expire_date)))}
               ${LB.icon('chevron')}</button>`).join('')}
           </div>`).join('') : '<p class="muted" style="margin:0">ยังไม่มีของในตู้</p>'}
         </section>

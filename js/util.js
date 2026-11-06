@@ -4,13 +4,17 @@
   const LB = (window.LB = window.LB || {});
   LB.views = LB.views || {};
   /** เวอร์ชันหน้าแอป (ฐานข้อมูลมีเลขเวอร์ชันของตัวเอง) */
-  LB.APP_VERSION = '2.6.0';
+  LB.APP_VERSION = '2.6.1';
 
   LB.esc = (s) => String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, (c) => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   LB.n = (v) => { const x = Number(v); return Number.isFinite(x) ? x : 0; };
-  LB.money = (v) => LB.n(v).toLocaleString('th-TH', { maximumFractionDigits: 2 });
+  LB.money = (v) => {
+    const n = LB.n(v);
+    const whole = Math.abs(n - Math.round(n)) < 0.005;
+    return n.toLocaleString('th-TH', whole ? { maximumFractionDigits: 0 } : { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
   LB.baht = (v) => LB.money(v) + ' บาท';
 
   const WD = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
@@ -65,6 +69,8 @@
   LB.ACTIVE = ['pending_deposit', 'confirmed', 'ready'];
 
   LB.badge = (status, text) => `<span class="badge ${LB.esc(status)}">${LB.esc(text || LB.L.status[status] || status)}</span>`;
+  /** ป้ายวันอบ (สติกเกอร์) ใช้กับวันรอบผลิตและวันหมดอายุ */
+  LB.stamp = (text, href) => href ? `<a class="stamp" href="${LB.esc(href)}">${LB.esc(text)}</a>` : `<span class="stamp">${LB.esc(text)}</span>`;
   LB.roundBadge = (state) => `<span class="badge ${LB.esc(state)}">${LB.esc(LB.L.roundState[state] || state)}</span>`;
 
   const ICONS = {
@@ -92,6 +98,7 @@
     book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
     box: '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7 12 12l8.7-5"/><path d="M12 22V12"/>',
     chevron: '<path d="M9 18l6-6-6-6"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
     map: '<path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>'
   };
   LB.icon = (name, cls) => `<svg class="icon ${cls || ''}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name] || ''}</svg>`;

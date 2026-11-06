@@ -125,7 +125,7 @@
     let preset = query.p || 'month';
     let [from, to] = LB.presetRange(preset);
     root.innerHTML = `${LB.topbar('กำไรขาดทุน', '#/more')}<div class="page">
-      <div class="chips" data-presets>${[['month', 'เดือนนี้'], ['lastmonth', 'เดือนก่อน'], ['quarter', 'ไตรมาสนี้'], ['year', 'ปีนี้'], ['custom', 'กำหนดเอง']]
+      <div class="chips scroll" data-presets>${[['month', 'เดือนนี้'], ['lastmonth', 'เดือนก่อน'], ['quarter', 'ไตรมาสนี้'], ['year', 'ปีนี้'], ['custom', 'กำหนดเอง']]
         .map(([k, l]) => `<button type="button" class="chip" data-p="${k}" aria-pressed="${k === preset}">${l}</button>`).join('')}</div>
       <div class="grid2" data-custom ${preset === 'custom' ? '' : 'hidden'}>
         <div class="field"><label for="pf-from">ตั้งแต่</label><input id="pf-from" class="input" type="date" value="${from}"></div>
@@ -145,7 +145,7 @@
       const income = sales + LB.n(r.shipping) + LB.n(r.tips);
       const gross = sales - LB.n(r.cogs);
       const net = income - LB.n(r.cogs) - LB.n(r.lostCost) - LB.n(r.materialLoss) - LB.n(r.expenses);
-      const pct = (v) => (sales ? ` (${Math.round((v / sales) * 100)}%)` : '');
+      const pct = (v) => (sales ? ` (${String(Math.round((v / sales) * 100)).replace('-', '−')}%)` : '');
       const notes = [];
       if (LB.n(r.cogsEstQty)) notes.push(`${r.cogsEstQty} ชิ้นที่ขายมาจากการอบที่ไม่ได้ตัดวัตถุดิบ ใช้ต้นทุนประมาณจากสูตรตามราคาวันนี้`);
       if (LB.n(r.cogsUnknownQty)) notes.push(`${r.cogsUnknownQty} ชิ้นเป็นเมนูที่ยังไม่มีสูตร จึงยังไม่มีต้นทุน กำไรจริงจะต่ำกว่าที่แสดง`);

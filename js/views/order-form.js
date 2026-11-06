@@ -140,9 +140,9 @@
       box.innerHTML = `<div class="kv"><span>ค่าขนม</span><span>${LB.baht(sub)}</span></div>
         ${disc ? `<div class="kv"><span>ส่วนลด</span><span>−${LB.baht(disc)}</span></div>` : ''}
         ${f.handover !== 'pickup' ? `<div class="kv"><span>ค่าส่ง</span><span>${ship ? LB.baht(ship) : 'ตามจริง'}</span></div>` : ''}
-        ${f.kind === 'deposit' ? `<div class="kv total"><span>มัดจำ ${pct}% (โอนตอนนี้)</span><span class="num money" style="font-size:20px">${LB.baht(dep)}</span></div>
+        ${f.kind === 'deposit' ? `<div class="kv total"><span>มัดจำ ${pct}% (โอนตอนนี้)</span><span class="num money" style="font-size:22px">${LB.baht(dep)}</span></div>
           <div class="kv muted"><span>ชำระวันรับ</span><span>${LB.baht(total - dep)}${f.handover !== 'pickup' && !ship ? ' + ค่าส่ง' : ''}</span></div>`
-          : `<div class="kv total"><span>รวม</span><span class="num money" style="font-size:20px">${LB.baht(total + ship)}</span></div>`}
+          : `<div class="kv total"><span>รวม</span><span class="num money" style="font-size:22px">${LB.baht(total + ship)}</span></div>`}
         ${f.kind !== 'ready' ? `<span class="hint">ยกเลิกก่อนวันรับ ${esc(s.refund_days)} วันขึ้นไป คืนเงินเต็ม น้อยกว่านั้นไม่คืน</span>` : ''}`;
     }
 

@@ -188,23 +188,22 @@
     root.innerHTML = `${LB.topbar('วัตถุดิบ', '#/more')}<div class="page">
       <div class="btn-row"><a class="btn solid" href="#/receive">${LB.icon('box')}รับของเข้า</a><a class="btn" href="#/count">${LB.icon('list')}นับสต็อก</a></div>
       <input class="input" type="search" data-q placeholder="ค้นหาชื่อหรือยี่ห้อ" aria-label="ค้นหาวัตถุดิบ">
-      <div class="chips" data-chips></div>
+      <div class="chips scroll" data-chips></div>
       <div class="stack" data-list></div>
       <p class="small muted" style="margin:0">สูตรใช้ชื่อกลาง ต้นทุนคิดจากราคาล่าสุดของยี่ห้อที่ตั้งเป็นหลัก</p>
       <button type="button" class="btn" data-add>${LB.icon('plus')}เพิ่มวัตถุดิบ</button></div>`;
     const card = (m) => {
       const ss = stockState(m);
       const main = m.items.find((i) => i.id === m.main_item);
-      const bits = [hasCost(m.unit_cost) ? `${unitCostFmt(m.unit_cost)} บาท/${esc(m.unit)}` : 'ยังไม่มีราคา', main ? esc(main.label) : 'ยังไม่มียี่ห้อ'];
+      const bits = [hasCost(m.unit_cost) ? `${unitCostFmt(m.unit_cost)} บาท/${esc(m.unit)}` : '<span class="warn-text">ยังไม่มีราคา</span>', main ? esc(main.label) : 'ยังไม่มียี่ห้อ'];
       if (m.items.length > 1) bits.push(m.items.length + ' ยี่ห้อ/ขนาด');
       const badges = (ss.low ? '<span class="badge warn">ใกล้หมด</span>' : '')
-        + (ss.expired ? '<span class="badge expired">มีของหมดอายุ</span>' : ss.expiring ? '<span class="badge warn">ใกล้หมดอายุ</span>' : '')
-        + (hasCost(m.unit_cost) ? '' : '<span class="badge outline">ต้องเติมราคา</span>');
-      return `<a class="card tight link" href="${matHref(m.name)}">
+        + (ss.expired ? '<span class="badge expired">มีของหมดอายุ</span>' : ss.expiring ? '<span class="badge warn">ใกล้หมดอายุ</span>' : '');
+      return `<a class="list-link" href="${matHref(m.name)}">
         <div class="row between"><span class="label grow" style="font-size:16px">${esc(m.name)}</span>${m.tracked
           ? `<span class="nowrap"><span class="small muted">เหลือ</span> <span class="num">${qtyFmt(m.on_hand)}</span> <span class="small muted">${esc(m.unit)}</span></span>`
           : '<span class="small muted nowrap">ยังไม่นับ</span>'}</div>
-        <span class="small muted">${bits.join(' · ')}</span>${badges ? `<div class="row wrap" style="gap:6px">${badges}</div>` : ''}</a>`;
+        <span class="small muted">${bits.join(' · ')}</span>${badges ? `<div class="row wrap" style="gap:8px">${badges}</div>` : ''}</a>`;
     };
     const paint = () => {
       const active = mats.filter((m) => m.status === 'active');
@@ -229,7 +228,7 @@
         || m.items.some((i) => i.label.toLowerCase().includes(words))) && pass(m));
       const groups = [...KINDS.map((k) => [k, shown.filter((m) => m.kind === k && m.status === 'active')]),
         ['เลิกใช้', shown.filter((m) => m.status !== 'active')]].filter(([, list]) => list.length);
-      root.querySelector('[data-list]').innerHTML = groups.length ? groups.map(([k, list]) => `<h2>${esc(k)} <span class="small muted">${list.length}</span></h2>${list.map(card).join('')}`).join('')
+      root.querySelector('[data-list]').innerHTML = groups.length ? groups.map(([k, list]) => `<section class="group"><h2>${esc(k)} <span class="small muted">${list.length}</span></h2><div class="card list">${list.map(card).join('')}</div></section>`).join('')
         : '<p class="empty">ไม่พบวัตถุดิบ</p>';
     };
     paint();
@@ -266,7 +265,7 @@
       root.innerHTML = `${LB.topbar(m.name, '#/materials', `<button type="button" class="icon-btn" data-edit aria-label="แก้ชื่อ ประเภท หน่วย จุดสั่งซื้อ">${LB.icon('edit')}</button>`)}<div class="page">
         <section class="card tight">
           <div class="row between"><span class="label" style="font-size:16px">คงเหลือ</span>${m.tracked
-            ? `<span class="num" style="font-size:20px">${esc(stockText(m))}</span>` : '<span class="muted">ยังไม่ได้นับสต็อก</span>'}</div>
+            ? `<span class="num" style="font-size:22px">${esc(stockText(m))}</span>` : '<span class="muted">ยังไม่ได้นับสต็อก</span>'}</div>
           ${LB.n(m.reorder_at) > 0 ? `<span class="small ${ss.low ? 'danger-text' : 'muted'}">${ss.low ? 'ถึงจุดสั่งซื้อแล้ว · สั่งเมื่อเหลือ' : 'จุดสั่งซื้อ: สั่งเมื่อเหลือ'} ${qtyFmt(m.reorder_at)} ${u}</span>`
             : '<span class="small muted">ยังไม่ได้ตั้งจุดสั่งซื้อ (กดรูปดินสอด้านบน)</span>'}
           ${ss.expired ? `<span class="small danger-text">หมดอายุแล้ว ${qtyFmt(m.expired)} ${u} ทิ้งแล้วกดนับสต็อกเพื่อปรับยอด</span>` : ''}
@@ -447,9 +446,9 @@
       sumEl.innerHTML = `<section class="card">
           <div class="row between small muted"><span>ทำ 1 ครั้งได้ ${qtyFmt(c.yieldQty)} ${esc(p.unit)}</span><span>${esc(verName(r.version_label, r.version))}</span></div>
           <div class="grid3">
-            <div class="stack tight" style="gap:0"><span class="small muted">ต้นทุน/${esc(p.unit)}</span><span class="num" style="font-size:20px">${costFmt(c.perUnit)}</span></div>
-            <div class="stack tight" style="gap:0"><span class="small muted">ราคาขาย</span><span class="num" style="font-size:20px">${LB.money(price)}</span></div>
-            <div class="stack tight" style="gap:0"><span class="small muted">เหลือ${price ? ` ${Math.round((left / price) * 100)}%` : ''}</span><span class="num ${left < 0 ? 'danger-text' : 'money'}" style="font-size:20px">${costFmt(left)}</span></div>
+            <div class="stack tight" style="gap:0"><span class="small muted">ต้นทุน/${esc(p.unit)}</span><span class="num" style="font-size:22px">${costFmt(c.perUnit)}</span></div>
+            <div class="stack tight" style="gap:0"><span class="small muted">ราคาขาย</span><span class="num" style="font-size:22px">${LB.money(price)}</span></div>
+            <div class="stack tight" style="gap:0"><span class="small muted">เหลือ${price ? ` ${Math.round((left / price) * 100)}%` : ''}</span><span class="num ${left < 0 ? 'danger-text' : 'money'}" style="font-size:22px">${costFmt(left)}</span></div>
           </div>
           <div class="kv"><span class="muted">ต้นทุนต่อครั้ง (${qtyFmt(c.yieldQty)} ${esc(p.unit)})</span><span>${costFmt(c.batch)} บาท</span></div>
           <p class="small muted" style="margin:0">ยังไม่รวมค่าแรง ค่าไฟ ค่าแก๊ส${alts.length ? ' · คิดตามแบบที่เลือกด้านล่าง' : ''}</p>

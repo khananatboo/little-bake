@@ -1,11 +1,11 @@
 /* เก็บไฟล์หน้าแอปไว้ในเครื่อง เปิดเร็วขึ้น (ข้อมูลร้านยังดึงจาก Supabase ทุกครั้ง) */
-const CACHE = 'little-bake-2.6.0';
+const CACHE = 'little-bake-2.6.1';
 const SHELL = [
-  './', 'index.html', 'manifest.webmanifest', 'css/app.css?v=2.6.0',
-  'js/config.js?v=2.6.0', 'js/util.js?v=2.6.0', 'js/api.js?v=2.6.0', 'js/ui.js?v=2.6.0', 'js/qr.js?v=2.6.0',
-  'js/promptpay.js?v=2.6.0', 'js/share.js?v=2.6.0', 'js/views/home.js?v=2.6.0', 'js/views/orders.js?v=2.6.0',
-  'js/views/order-form.js?v=2.6.0', 'js/views/rounds.js?v=2.6.0', 'js/views/production.js?v=2.6.0',
-  'js/views/more.js?v=2.6.0', 'js/views/kitchen.js?v=2.6.0', 'js/views/stock.js?v=2.6.0', 'js/views/money.js?v=2.6.0', 'js/app.js?v=2.6.0',
+  './', 'index.html', 'manifest.webmanifest', 'css/app.css?v=2.6.1',
+  'js/config.js?v=2.6.1', 'js/util.js?v=2.6.1', 'js/api.js?v=2.6.1', 'js/ui.js?v=2.6.1', 'js/qr.js?v=2.6.1',
+  'js/promptpay.js?v=2.6.1', 'js/share.js?v=2.6.1', 'js/views/home.js?v=2.6.1', 'js/views/orders.js?v=2.6.1',
+  'js/views/order-form.js?v=2.6.1', 'js/views/rounds.js?v=2.6.1', 'js/views/production.js?v=2.6.1',
+  'js/views/more.js?v=2.6.1', 'js/views/kitchen.js?v=2.6.1', 'js/views/stock.js?v=2.6.1', 'js/views/money.js?v=2.6.1', 'js/app.js?v=2.6.1',
   'icons/logo-192.png', 'icons/logo-512.png', 'icons/favicon.png'
 ];
 

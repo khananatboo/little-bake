@@ -59,14 +59,14 @@
           <div class="btn-row"><a class="btn" href="#/round/${esc(r.id)}">ดูรอบนี้</a>
           ${r.state === 'open' ? `<button type="button" class="btn" data-story="${esc(r.id)}">${LB.icon('share')}แชร์ประกาศ</button>` : `<a class="btn" href="#/production?round=${esc(r.id)}">${LB.icon('cake')}ไปหน้าผลิต</a>`}</div>
         </section>`).join('') : `<section class="card"><h2>ยังไม่มีรอบผลิตที่เปิดอยู่</h2>
-          <p class="muted" style="margin:0">เปิดรอบใหม่เพื่อเริ่มรับ pre-order</p>
+          <p class="muted" style="margin:0">เปิดรอบใหม่เพื่อเริ่มรับพรีออเดอร์</p>
           <a class="btn" href="#/rounds/new">${LB.icon('calendar')}เปิดรอบผลิต</a></section>`}
 
         <section class="card">
           <h2>ต้องทำวันนี้</h2>
           ${d.todo.length ? d.todo.map((o, idx) => `${idx ? '<hr class="divider">' : ''}${LB.orderRowHtml(o,
             o.status === 'pending_deposit'
-              ? `<button type="button" class="btn small primary" data-pay="${esc(o.id)}">ยืนยันรับเงิน</button>`
+              ? `<button type="button" class="btn small" style="font-weight:600" data-pay="${esc(o.id)}">ยืนยันรับเงิน</button>`
               : `<a class="btn small" href="#/order/${esc(o.id)}">ส่งมอบ</a>`)}`).join('')
             : '<p class="muted" style="margin:0">ไม่มีงานค้าง</p>'}
         </section>
