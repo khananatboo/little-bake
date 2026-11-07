@@ -200,6 +200,12 @@
     root.innerHTML = `${LB.topbar('ตั้งค่าร้าน', '#/more')}<form class="page no-nav" data-form novalidate>
       ${field('shop_name', 'ชื่อร้าน', '', 'maxlength="60"')}
       ${field('promptpay_id', 'PromptPay', 'เบอร์โทร 10 หลัก หรือเลขบัตรประชาชน/เลขผู้เสียภาษี 13 หลัก ใช้สร้าง QR รับเงิน', 'inputmode="numeric" maxlength="20"')}
+      ${'bank_account' in s ? `<fieldset class="more-opts stack" style="margin:0"><legend class="label" style="padding:0 4px">บัญชีรับโอน</legend>
+        <span class="hint" style="margin:0">แสดงให้ลูกค้าดูตอนเลือกจ่ายด้วยเงินโอนในหน้าขาย</span>
+        ${field('bank_name', 'ธนาคาร', '', 'maxlength="60" list="st-banks" placeholder="เช่น กสิกรไทย"')}
+        <datalist id="st-banks">${['กสิกรไทย', 'กรุงเทพ', 'กรุงไทย', 'กรุงศรีอยุธยา', 'ไทยพาณิชย์', 'ทหารไทยธนชาต (ttb)', 'ออมสิน', 'ธ.ก.ส.', 'ยูโอบี', 'ซีไอเอ็มบี ไทย', 'เกียรตินาคินภัทร', 'แลนด์ แอนด์ เฮ้าส์'].map((b) => `<option value="${b}">`).join('')}</datalist>
+        ${field('bank_account', 'เลขที่บัญชี', '', 'inputmode="numeric" maxlength="24" autocomplete="off"')}
+        ${field('bank_account_name', 'ชื่อบัญชี', '', 'maxlength="80"')}</fieldset>` : ''}
       <div class="grid2">${field('deposit_percent', 'มัดจำ (%)', '', 'inputmode="numeric"')}${field('refund_days', 'คืนเงินถ้ายกเลิกก่อน (วัน)', '', 'inputmode="numeric"')}</div>
       <div class="grid2">${field('cutoff_days', 'ปิดรับก่อนวันผลิต (วัน)', '', 'inputmode="numeric"')}${field('expiry_warn_days', 'เตือนใกล้หมดอายุ (วัน)', '', 'inputmode="numeric"')}</div>
       ${field('material_warn_days', 'เตือนวัตถุดิบใกล้หมดอายุ (วัน)', 'นับจากวันหมดอายุที่ใส่ตอนรับของเข้า', 'inputmode="numeric"')}

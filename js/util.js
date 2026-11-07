@@ -4,7 +4,7 @@
   const LB = (window.LB = window.LB || {});
   LB.views = LB.views || {};
   /** เวอร์ชันหน้าแอป (ฐานข้อมูลมีเลขเวอร์ชันของตัวเอง) */
-  LB.APP_VERSION = '2.7.0';
+  LB.APP_VERSION = '2.7.1';
 
   LB.esc = (s) => String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, (c) => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -101,6 +101,7 @@
     check: '<path d="M20 6 9 17l-5-5"/>',
     expand: '<path d="M4 9V4h5"/><path d="M20 9V4h-5"/><path d="M4 15v5h5"/><path d="M20 15v5h-5"/>',
     clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    bank: '<path d="M3 21h18"/><path d="M5 21V11"/><path d="M9.5 21V11"/><path d="M14.5 21V11"/><path d="M19 21V11"/><path d="M12 3 3 8v3h18V8z"/>',
     alert: '<path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4"/><path d="M12 17v.01"/>',
     map: '<path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>'
   };

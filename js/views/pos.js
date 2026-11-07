@@ -1,4 +1,4 @@
-/* ขายหน้าร้าน (POS): หน้าขาย บิล รับเงิน และรับของพรีออเดอร์ */
+/* ขายหน้าร้าน (POS): หน้าขาย บิลพร้อมปุ่มรับเงิน และรับของพรีออเดอร์ */
 (function () {
   'use strict';
   const LB = window.LB;
@@ -49,15 +49,27 @@
     window.LBQR.draw(ctx, payload, 0, 0, canvas.width, '#000000', '#ffffff');
   }
 
+  /** เลข PromptPay แบบเต็มให้ลูกค้าอ่านง่าย เช่น 081-234-5678 */
+  function promptpayText(id) {
+    const d = String(id || '').replace(/\D/g, '');
+    if (d.length === 10) return `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}`;
+    if (d.length === 13) return `${d.slice(0, 1)}-${d.slice(1, 5)}-${d.slice(5, 10)}-${d.slice(10, 12)}-${d.slice(12)}`;
+    return d;
+  }
+
+  const SHEET_ACTIONS = (okText) => `<div class="btn-row sheet-actions">
+    <button type="button" class="btn" data-cancel>ยกเลิก</button>
+    <button type="button" class="btn primary" data-ok>${esc(okText)}</button></div>`;
+
   LB.views.sale = async (root, params, query, alive) => {
     root.innerHTML = LB.loadingHtml;
     const user = LB.state.user || {};
-    const shop = (LB.state.settings || {}).shop_name || 'little bake.';
+    const settings = LB.state.settings || {};
+    const shop = settings.shop_name || 'little bake.';
     const st = {
       menu: [], cart: new Map(), orders: null,
       tab: query.tab === 'pickup' ? 'pickup' : 'sell', step: 'menu',
-      cat: 'all', q: '', pq: '', name: '', disc: '',
-      method: 'cash', recv: '', tipKeep: false, qrAt: 0
+      cat: 'all', q: '', pq: '', name: '', disc: ''
     };
 
     async function loadMenu() {
@@ -150,9 +162,11 @@
       return html || '<div class="empty">ไม่พบเมนูที่ค้นหา</div>';
     }
 
+    /** บิลกับปุ่มรับเงินอยู่ด้วยกัน: แท็บเล็ตอยู่ข้างเมนู มือถือเปิดเต็มจอ */
     function cartHtml() {
       const ls = lines();
       const t = totals();
+      const off = t.count ? '' : 'disabled';
       return `${st.step === 'bill' ? `<button type="button" class="btn small" data-to-menu style="align-self:flex-start">${LB.icon('back')}เลือกเมนูต่อ</button>` : ''}
         <div class="row between"><h2>บิลหน้าร้าน</h2>${ls.length ? '<button type="button" class="btn small" data-clear>ล้างบิล</button>' : ''}</div>
         ${ls.length ? `<div class="cart-lines">${ls.map((l) => `<div class="cart-line" data-line="${esc(l.m.id)}">
@@ -166,9 +180,13 @@
         <div class="stack tight">
           <div class="kv"><span>ค่าขนม ${t.count ? `${t.count} ชิ้น` : ''}</span><span data-sub>${LB.baht(t.sub)}</span></div>
           <div class="kv" data-disc-row ${t.disc ? '' : 'hidden'}><span>ส่วนลด</span><span data-disc>−${LB.baht(t.disc)}</span></div>
-          <div class="kv total"><span>ยอดที่ต้องจ่าย</span><span class="num money pos-total" data-total>${LB.baht(t.total)}</span></div>
         </div>
-        <button type="button" class="btn primary big" data-pay ${t.count ? '' : 'disabled'}>รับเงิน</button>`;
+        <div class="pay-due"><span>ยอดที่ต้องจ่าย</span><span class="num money pos-total" data-total>${LB.baht(t.total)}</span></div>
+        <div class="pay-btns" role="group" aria-label="เลือกวิธีรับเงิน">
+          <button type="button" class="pay-btn" data-method="cash" ${off}>${LB.icon('wallet')}<span>รับเงินสด</span></button>
+          <button type="button" class="pay-btn" data-method="promptpay" ${off}>${LB.icon('qr')}<span>PromptPay</span></button>
+          <button type="button" class="pay-btn" data-method="transfer" ${off}>${LB.icon('bank')}<span>เงินโอน</span></button>
+        </div>`;
     }
 
     function barHtml() {
@@ -209,144 +227,202 @@
         ${later.length ? `<section class="group"><h2>รับวันถัดไป <span class="small muted">${later.length}</span></h2>${later.map(orderCard).join('')}</section>` : ''}`;
     }
 
-    /* ---------- หน้ารับเงิน ---------- */
+    /* ---------- ปิดบิล ---------- */
 
-    function payHtml() {
-      const ls = lines();
+    /** บันทึกการขาย คืนค่า true เมื่อสำเร็จ */
+    async function closeBill(method, cash) {
       const t = totals();
-      const nowText = new Date().toLocaleString('th-TH', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-      return `<div class="pay">
-        <section class="card pay-bill">
-          <button type="button" class="btn small" data-to-menu style="align-self:flex-start">${LB.icon('back')}กลับไปแก้บิล</button>
-          <h2>บิลหน้าร้าน</h2>
-          <span class="small muted">${esc(nowText)} · ขายโดย ${esc(user.name || '')}${st.name ? ' · ' + esc(st.name) : ''}</span>
-          <table class="data"><tbody>${ls.map((l) => `<tr><td>${esc(l.m.name)} × ${l.qty}</td><td class="r">${LB.baht(l.qty * l.m.sell)}</td></tr>`).join('')}</tbody></table>
-          ${t.disc ? `<div class="kv"><span>ส่วนลด</span><span>−${LB.baht(t.disc)}</span></div>` : ''}
-          <div class="kv total"><span>ยอดที่ต้องจ่าย</span><span class="num money pos-total">${LB.baht(t.total)}</span></div>
-        </section>
-        <section class="pay-panel">
-          ${LB.choiceHtml('seg', 'method', [['cash', 'เงินสด'], ['promptpay', 'PromptPay'], ['transfer', 'โอน / อื่น ๆ']], st.method)}
-          <div class="stack" data-pane></div>
-          <p class="hint" style="margin:0">ก่อนกดปุ่มนี้ ระบบยังไม่บันทึกการขายและยังไม่ตัดขนมจากตู้</p>
-          <button type="button" class="btn primary big" data-close-bill></button>
-        </section>
-      </div>`;
+      const items = lines().map((l) => ({ product_id: l.m.id, qty: l.qty }));
+      if (!items.length) { LB.error('ยังไม่มีของในบิล'); return false; }
+      let tip = 0;
+      let note = '';
+      if (method === 'cash' && cash) {
+        if (cash.change < 0) { LB.error('รับเงินมาไม่พอ'); return false; }
+        if (cash.tipKeep && cash.change > 0) tip = cash.change;
+        if (cash.typed && cash.change !== 0) {
+          note = cash.tipKeep
+            ? `รับเงินสด ${LB.money(cash.recv)} บาท ไม่รับเงินทอน ${LB.money(cash.change)} บาท เก็บเป็นทิป`
+            : `รับเงินสด ${LB.money(cash.recv)} บาท ทอน ${LB.money(cash.change)} บาท`;
+        }
+      }
+      try {
+        const o = await LB.busy(() => LB.api('sales.quick', {
+          items, method, customer_name: st.name, discount: t.disc || '', tip: tip || '', note
+        }));
+        LB.toast(`ปิดบิลแล้ว ${LB.baht(LB.n(o.total) + LB.n(o.tip))}`);
+        st.cart.clear();
+        Object.assign(st, { name: '', disc: '', step: 'menu' });
+        await loadMenu();
+        if (alive()) paint();
+        return true;
+      } catch (e) { LB.error(e); return false; }
     }
 
-    function cashPane(total) {
+    /** หัวแผ่นรับเงิน: ยอดที่ต้องจ่าย */
+    const dueHtml = (total) => `<div class="pay-due sheet-due"><span>ยอดที่ต้องจ่าย</span><span class="num money pos-total">${LB.baht(total)}</span></div>`;
+
+    /* ---------- แผ่นรับเงินสด ---------- */
+
+    function cashSheet() {
+      const t = totals();
       const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '00', '0', 'del'];
-      return `<div class="field"><label for="cash-in">รับเงินมา (บาท)</label>
-          <input id="cash-in" class="input cash-in" type="text" inputmode="none" autocomplete="off" value="${esc(st.recv)}" placeholder="${esc(LB.money(total))}"></div>
-        <div class="quick">${quickAmounts(total).map(([v, label]) => `<button type="button" class="btn" data-quick="${v}">${esc(label)}</button>`).join('')}</div>
+      const c = { recv: '', tipKeep: false };
+      const s = LB.sheet('รับเงินสด', `${dueHtml(t.total)}
+        <div class="field"><label for="cash-in">รับเงินมา (บาท)</label>
+          <input id="cash-in" class="input cash-in" type="text" inputmode="none" autocomplete="off" placeholder="${esc(LB.money(t.total))}"></div>
+        <div class="quick">${quickAmounts(t.total).map(([v, label]) => `<button type="button" class="btn" data-quick="${v}">${esc(label)}</button>`).join('')}</div>
         <div class="keypad-pos">${keys.map((k) => `<button type="button" data-key="${k}" aria-label="${k === 'del' ? 'ลบตัวเลขตัวท้าย' : 'ตัวเลข ' + k}">${k === 'del' ? 'ลบ' : k}</button>`).join('')}</div>
         <div class="change" data-change aria-live="polite"></div>
-        <label class="row" data-tip-row hidden style="gap:12px;min-height:44px"><input type="checkbox" class="check" data-tip ${st.tipKeep ? 'checked' : ''}>ลูกค้าไม่รับเงินทอน เก็บเป็นทิป</label>`;
+        <label class="row" data-tip-row hidden style="gap:12px;min-height:44px"><input type="checkbox" class="check" data-tip>ลูกค้าไม่รับเงินทอน เก็บเป็นทิป</label>
+        ${SHEET_ACTIONS('ได้รับเงินแล้ว ปิดบิล')}`);
+      s.el.closest('.sheet').classList.add('pay-sheet');
+      const el = s.el;
+      const input = el.querySelector('#cash-in');
+      const state = () => {
+        const recv = c.recv === '' ? t.total : LB.n(c.recv);
+        return { recv, typed: c.recv !== '', tipKeep: c.tipKeep, change: Math.round((recv - t.total) * 100) / 100 };
+      };
+      const paintCash = () => {
+        const x = state();
+        const box = el.querySelector('[data-change]');
+        box.className = 'change' + (x.change < 0 ? ' short' : '');
+        box.innerHTML = x.change < 0
+          ? `<span>ยังขาดอีก</span><span class="num">${LB.baht(-x.change)}</span>`
+          : `<span>เงินทอน</span><span class="num">${LB.baht(c.tipKeep ? 0 : x.change)}</span>`;
+        el.querySelector('[data-tip-row]').hidden = !(x.change > 0);
+        if (x.change <= 0) { c.tipKeep = false; el.querySelector('[data-tip]').checked = false; }
+        el.querySelector('[data-ok]').disabled = x.change < 0;
+        el.querySelectorAll('[data-quick]').forEach((b) => b.setAttribute('aria-pressed', String(c.recv !== '' && LB.n(c.recv) === Number(b.dataset.quick))));
+      };
+      el.addEventListener('click', async (e) => {
+        const key = e.target.closest('[data-key]');
+        if (key) {
+          const k = key.dataset.key;
+          if (k === 'del') c.recv = c.recv.slice(0, -1);
+          else {
+            const next = (c.recv + k).replace(/^0+(?=\d)/, '');
+            if (next.length <= 7) c.recv = next;
+          }
+          input.value = c.recv;
+          paintCash();
+          return;
+        }
+        const quick = e.target.closest('[data-quick]');
+        if (quick) { c.recv = String(Number(quick.dataset.quick)); input.value = c.recv; paintCash(); return; }
+        if (e.target.closest('[data-cancel]')) { s.close(); return; }
+        if (e.target.closest('[data-ok]')) { if (await closeBill('cash', state())) s.close(); }
+      });
+      input.addEventListener('input', () => { c.recv = input.value.replace(/[^\d.]/g, ''); paintCash(); });
+      el.querySelector('[data-tip]').addEventListener('change', (e) => { c.tipKeep = e.target.checked; paintCash(); });
+      paintCash();
     }
 
-    function promptpayPane(total) {
-      const s = LB.state.settings || {};
-      if (!String(s.promptpay_id || '').replace(/\D/g, '')) {
-        return `<div class="card stack tight"><p style="margin:0">ยังไม่ได้ใส่ PromptPay ID ของร้าน</p>
-          <a class="btn" href="#/settings">ไปหน้าตั้งค่าร้าน</a></div>`;
+    /* ---------- แผ่น PromptPay ---------- */
+
+    function promptpaySheet() {
+      const t = totals();
+      const id = String(settings.promptpay_id || '').replace(/\D/g, '');
+      if (!id) {
+        const s = LB.sheet('PromptPay', `<p style="margin:0">ยังไม่ได้ใส่ PromptPay ของร้าน ใส่ได้ที่หน้าตั้งค่าร้าน</p>
+          <div class="btn-row"><button type="button" class="btn" data-close>ยกเลิก</button><a class="btn primary" href="#/settings" data-close>ไปหน้าตั้งค่าร้าน</a></div>`);
+        return s;
       }
-      return `<div class="card qr-pos">
+      const s = LB.sheet('PromptPay', `${dueHtml(t.total)}
+        <div class="card qr-pos">
           <div class="row" style="gap:8px;align-self:stretch"><img class="pos-logo" src="${LOGO}" alt="" width="40" height="40"><span class="label">สแกนจ่ายด้วย PromptPay</span></div>
-          <canvas data-qr width="580" height="580" role="img" aria-label="QR PromptPay ยอด ${esc(LB.money(total))} บาท"></canvas>
-          <span class="num money pos-total">${LB.baht(total)}</span>
-          <span class="small muted">${esc(shop)} · PromptPay ${esc(window.LBPromptPay.maskId(s.promptpay_id))}</span>
+          <canvas data-qr width="580" height="580" role="img" aria-label="QR PromptPay ยอด ${esc(LB.money(t.total))} บาท"></canvas>
+          <span class="small muted">${esc(shop)} · PromptPay ${esc(window.LBPromptPay.maskId(id))}</span>
         </div>
         <div class="btn-row"><button type="button" class="btn" data-full>${LB.icon('expand')}เต็มจอให้ลูกค้า</button>
           <button type="button" class="btn" data-share-qr>${LB.icon('share')}แชร์รูป QR</button></div>
-        <span class="wait-pill" data-wait>${LB.icon('clock')}<span data-wait-text>รอลูกค้าโอน</span></span>
-        <div class="alert-box">${LB.icon('alert')}<span><b>ดูแค่สลิปบนมือถือลูกค้าไม่พอ</b> สลิปปลอมทำได้ง่าย ให้ดูแจ้งเตือนเงินเข้าในแอปธนาคารของร้านทุกครั้ง</span></div>`;
-    }
-
-    function transferPane() {
-      return `<div class="card stack tight"><span class="label">โอนเข้าบัญชีร้าน หรือจ่ายช่องทางอื่น</span>
-        <span class="small muted">ดูว่าเงินเข้าแล้วในแอปธนาคารของร้าน ก่อนกดปิดบิล</span></div>`;
-    }
-
-    /** เงินสด: คิดเงินทอน */
-    function cashState() {
-      const t = totals();
-      const recv = st.recv === '' ? t.total : LB.n(st.recv);
-      return { total: t.total, recv, change: Math.round((recv - t.total) * 100) / 100 };
-    }
-    function paintCash() {
-      const box = root.querySelector('[data-change]');
-      if (!box) return;
-      const c = cashState();
-      box.className = 'change' + (c.change < 0 ? ' short' : '');
-      box.innerHTML = c.change < 0
-        ? `<span>ยังขาดอีก</span><span class="num">${LB.baht(-c.change)}</span>`
-        : `<span>เงินทอน</span><span class="num">${LB.baht(st.tipKeep ? 0 : c.change)}</span>`;
-      const tipRow = root.querySelector('[data-tip-row]');
-      tipRow.hidden = !(c.change > 0);
-      if (c.change <= 0) st.tipKeep = false;
-      root.querySelector('[data-close-bill]').disabled = c.change < 0;
-      root.querySelectorAll('[data-quick]').forEach((b) => b.setAttribute('aria-pressed', String(st.recv !== '' && LB.n(st.recv) === Number(b.dataset.quick))));
-    }
-
-    let waitTimer = null;
-    function paintPane() {
-      const pane = root.querySelector('[data-pane]');
-      const t = totals();
-      clearInterval(waitTimer);
-      const btn = root.querySelector('[data-close-bill]');
-      btn.disabled = false;
-      if (st.method === 'cash') {
-        pane.innerHTML = cashPane(t.total);
-        btn.textContent = 'ได้รับเงินแล้ว ปิดบิล';
-        paintCash();
-      } else if (st.method === 'promptpay') {
-        pane.innerHTML = promptpayPane(t.total);
-        btn.textContent = 'เงินเข้าแล้ว ปิดบิล';
-        const cv = pane.querySelector('[data-qr]');
-        if (cv) {
-          drawQr(cv, t.total);
-          if (!st.qrAt) st.qrAt = Date.now();
-          const tick = () => {
-            if (!alive() || !document.body.contains(cv)) { clearInterval(waitTimer); return; }
-            const sec = Math.floor((Date.now() - st.qrAt) / 1000);
-            const el = pane.querySelector('[data-wait-text]');
-            if (el) el.textContent = `รอลูกค้าโอน · เปิด QR มา ${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
-          };
-          tick();
-          waitTimer = setInterval(tick, 1000);
-        } else {
-          btn.disabled = true;
+        <span class="wait-pill">${LB.icon('clock')}<span data-wait-text>รอลูกค้าโอน</span></span>
+        <div class="alert-box">${LB.icon('alert')}<span><b>ดูแค่สลิปบนมือถือลูกค้าไม่พอ</b> สลิปปลอมทำได้ง่าย ให้ดูแจ้งเตือนเงินเข้าในแอปธนาคารของร้านทุกครั้ง</span></div>
+        ${SHEET_ACTIONS('เงินเข้าแล้ว ปิดบิล')}`);
+      s.el.closest('.sheet').classList.add('pay-sheet');
+      const el = s.el;
+      const cv = el.querySelector('[data-qr]');
+      drawQr(cv, t.total);
+      const started = Date.now();
+      const tick = () => {
+        if (!alive() || !document.body.contains(cv)) { clearInterval(timer); return; }
+        const sec = Math.floor((Date.now() - started) / 1000);
+        el.querySelector('[data-wait-text]').textContent = `รอลูกค้าโอน · เปิด QR มา ${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+      };
+      const timer = setInterval(tick, 1000);
+      tick();
+      el.addEventListener('click', async (e) => {
+        if (e.target.closest('[data-cancel]')) { s.close(); return; }
+        if (e.target.closest('[data-full]')) { openFull(t.total, e.target.closest('[data-full]')); return; }
+        if (e.target.closest('[data-share-qr]')) {
+          try {
+            const img = await LB.drawPayQr({ id: 'ขายหน้าร้าน', customer_name: st.name }, t.total);
+            LB.shareCanvas(img, 'qr-promptpay.png', 'QR PromptPay');
+          } catch (err) { LB.error(err); }
+          return;
         }
-      } else {
-        pane.innerHTML = transferPane();
-        btn.textContent = 'เงินเข้าแล้ว ปิดบิล';
+        if (e.target.closest('[data-ok]')) { if (await closeBill('promptpay')) s.close(); }
+      });
+      return s;
+    }
+
+    /* ---------- แผ่นเงินโอน ---------- */
+
+    function transferSheet() {
+      const t = totals();
+      const id = String(settings.promptpay_id || '').replace(/\D/g, '');
+      const acct = String(settings.bank_account || '').trim();
+      const copyBtn = (value, label) => `<button type="button" class="btn small" data-copy="${esc(value)}" aria-label="คัดลอก${esc(label)}">${LB.icon('copy')}คัดลอก</button>`;
+      const rows = [];
+      if (acct) {
+        rows.push(`<div class="acct">
+          <span class="small muted">${esc(settings.bank_name || 'บัญชีธนาคาร')}</span>
+          <div class="row between" style="gap:8px"><span class="num acct-no">${esc(acct)}</span>${copyBtn(acct.replace(/\D/g, ''), 'เลขที่บัญชี')}</div>
+          ${settings.bank_account_name ? `<span>ชื่อบัญชี ${esc(settings.bank_account_name)}</span>` : ''}</div>`);
       }
+      if (id) {
+        rows.push(`<div class="acct">
+          <span class="small muted">PromptPay</span>
+          <div class="row between" style="gap:8px"><span class="num acct-no">${esc(promptpayText(id))}</span>${copyBtn(id, 'เลข PromptPay')}</div></div>`);
+      }
+      const s = LB.sheet('เงินโอน', `${dueHtml(t.total)}
+        ${rows.length ? `<div class="card acct-card">${rows.join('<hr class="divider">')}</div>
+          <p class="hint" style="margin:0">ให้ลูกค้าโอนตามยอดนี้ แล้วดูว่าเงินเข้าในแอปธนาคารของร้านก่อนกดปิดบิล</p>`
+          : `<div class="card stack tight"><span>ยังไม่ได้ใส่เลขบัญชีหรือ PromptPay ของร้าน</span>
+            <a class="btn" href="#/settings" data-close>ไปหน้าตั้งค่าร้าน</a></div>`}
+        ${SHEET_ACTIONS('เงินเข้าแล้ว ปิดบิล')}`);
+      s.el.closest('.sheet').classList.add('pay-sheet');
+      s.el.addEventListener('click', async (e) => {
+        const cp = e.target.closest('[data-copy]');
+        if (cp) { LB.copyText(cp.dataset.copy); return; }
+        if (e.target.closest('[data-cancel]')) { s.close(); return; }
+        if (e.target.closest('[data-ok]')) { if (await closeBill('transfer')) s.close(); }
+      });
+      return s;
     }
 
     /** QR เต็มจอ หันให้ลูกค้าสแกน แตะค้างเพื่อกลับ ลูกค้าจะได้ไม่เผลอปิด */
-    function openFull() {
-      const t = totals();
+    function openFull(total, returnFocus) {
       const ov = document.createElement('div');
       ov.className = 'qr-full';
       ov.setAttribute('role', 'dialog');
       ov.setAttribute('aria-modal', 'true');
       ov.setAttribute('aria-label', 'QR สำหรับลูกค้าสแกนจ่าย');
-      ov.innerHTML = `<div class="qr-full-card"><canvas width="720" height="720" role="img" aria-label="QR PromptPay ยอด ${esc(LB.money(t.total))} บาท"></canvas></div>
+      ov.innerHTML = `<div class="qr-full-card"><canvas width="720" height="720" role="img" aria-label="QR PromptPay ยอด ${esc(LB.money(total))} บาท"></canvas></div>
         <div class="qr-full-info">
           <img class="qr-full-logo" src="${LOGO}" alt="${esc(shop)}" width="128" height="128">
           <h2>สแกนจ่ายด้วย PromptPay</h2>
-          <div class="stack tight" style="gap:0"><span class="muted">ยอดที่ต้องจ่าย</span><span class="num money qr-full-amt">${LB.baht(t.total)}</span></div>
+          <div class="stack tight" style="gap:0"><span class="muted">ยอดที่ต้องจ่าย</span><span class="num money qr-full-amt">${LB.baht(total)}</span></div>
           <div class="qr-full-lines">${lines().map((l) => `<div class="kv"><span>${esc(l.m.name)} × ${l.qty}</span><span>${LB.baht(l.qty * l.m.sell)}</span></div>`).join('')}</div>
-          <span class="muted">สแกนด้วยแอปธนาคารใดก็ได้ ยอดเงินขึ้นให้เอง ขอบคุณที่อุดหนุน</span>
+          <span class="muted">สแกนด้วยแอปธนาคารใดก็ได้ ยอดเงินขึ้นให้เอง ขอบคุณที่อุดหนุน${esc(settings.polite_particle || '')}</span>
         </div>
         <button type="button" class="btn small qr-full-back">แตะค้างเพื่อกลับ (คนขาย)</button>`;
       document.body.appendChild(ov);
       document.body.style.overflow = 'hidden';
-      drawQr(ov.querySelector('canvas'), t.total);
+      drawQr(ov.querySelector('canvas'), total);
       const close = () => {
         ov.remove();
         if (!document.querySelector('.sheet-backdrop')) document.body.style.overflow = '';
-        const b = root.querySelector('[data-full]');
-        if (b) b.focus();
+        if (returnFocus && document.body.contains(returnFocus)) returnFocus.focus();
       };
       const back = ov.querySelector('.qr-full-back');
       let hold = null;
@@ -361,31 +437,6 @@
       ov.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
       back.focus();
       const watch = setInterval(() => { if (!alive()) { clearInterval(watch); close(); } else if (!document.body.contains(ov)) clearInterval(watch); }, 500);
-    }
-
-    async function closeBill() {
-      const t = totals();
-      const items = lines().map((l) => ({ product_id: l.m.id, qty: l.qty }));
-      if (!items.length) { LB.error('ยังไม่มีของในบิล'); return; }
-      let tip = 0;
-      let note = '';
-      if (st.method === 'cash') {
-        const c = cashState();
-        if (c.change < 0) { LB.error('รับเงินมาไม่พอ'); return; }
-        if (st.tipKeep && c.change > 0) tip = c.change;
-        if (st.recv !== '' && c.change !== 0) note = st.tipKeep ? `รับเงินสด ${LB.money(c.recv)} บาท ไม่รับเงินทอน ${LB.money(c.change)} บาท เก็บเป็นทิป` : `รับเงินสด ${LB.money(c.recv)} บาท ทอน ${LB.money(c.change)} บาท`;
-      }
-      try {
-        const o = await LB.busy(() => LB.api('sales.quick', {
-          items, method: st.method, customer_name: st.name, discount: t.disc || '', tip: tip || '', note
-        }));
-        LB.toast(`ปิดบิลแล้ว ${LB.baht(LB.n(o.total) + LB.n(o.tip))}`);
-        st.cart.clear();
-        Object.assign(st, { name: '', disc: '', step: 'menu', recv: '', tipKeep: false, qrAt: 0, method: 'cash' });
-        await loadMenu();
-        if (!alive()) return;
-        paint();
-      } catch (e) { LB.error(e); }
     }
 
     /* ---------- วาดหน้า ---------- */
@@ -417,38 +468,28 @@
     }
 
     function paint() {
-      clearInterval(waitTimer);
       const wrap = document.createElement('div');
       wrap.className = 'pos';
       wrap.dataset.screen = st.step;
       wrap.dataset.tab = st.tab;
-      if (st.step === 'pay') {
-        wrap.innerHTML = head() + payHtml();
-      } else {
-        const chips = catList();
-        wrap.innerHTML = `${head()}<div class="pos-body">
-          <section class="pos-menu" ${st.tab === 'sell' ? '' : 'hidden'}>
-            <label class="sr-only" for="ps-q">ค้นหาเมนู</label>
-            <input id="ps-q" class="input" type="search" placeholder="ค้นหาเมนู" value="${esc(st.q)}">
-            <div class="chips scroll" data-cats>${chips.map(([k, label, n]) => `<button type="button" class="chip" data-cat="${esc(k)}" aria-pressed="${k === st.cat}">${esc(label)}${n ? ` <span class="count">${n}</span>` : ''}</button>`).join('')}</div>
-            <div class="stack" data-sections>${sectionsHtml()}</div>
-          </section>
-          <section class="pos-menu" data-pickup ${st.tab === 'pickup' ? '' : 'hidden'}>${pickupHtml()}</section>
-          <aside class="pos-cart" data-cart aria-label="บิลหน้าร้าน">${cartHtml()}</aside>
-        </div>
-        <div class="pos-bar" data-bar>${barHtml()}</div>`;
-      }
+      const chips = catList();
+      wrap.innerHTML = `${head()}<div class="pos-body">
+        <section class="pos-menu" ${st.tab === 'sell' ? '' : 'hidden'}>
+          <label class="sr-only" for="ps-q">ค้นหาเมนู</label>
+          <input id="ps-q" class="input" type="search" placeholder="ค้นหาเมนู" value="${esc(st.q)}">
+          <div class="chips scroll" data-cats>${chips.map(([k, label, n]) => `<button type="button" class="chip" data-cat="${esc(k)}" aria-pressed="${k === st.cat}">${esc(label)}${n ? ` <span class="count">${n}</span>` : ''}</button>`).join('')}</div>
+          <div class="stack" data-sections>${sectionsHtml()}</div>
+        </section>
+        <section class="pos-menu" data-pickup ${st.tab === 'pickup' ? '' : 'hidden'}>${pickupHtml()}</section>
+        <aside class="pos-cart" data-cart aria-label="บิลหน้าร้าน">${cartHtml()}</aside>
+      </div>
+      <div class="pos-bar" data-bar>${barHtml()}</div>`;
       root.replaceChildren(wrap);
       LB.bindChoice(wrap, '.pos-tabs', (n, v) => {
         st.tab = v;
-        if (st.step === 'pay') st.step = 'menu';
         paint();
         if (v === 'pickup') loadOrders().then(() => { if (alive()) { paintPickup(); refreshTabCount(); } }).catch(LB.error);
       });
-      if (st.step === 'pay') {
-        LB.bindChoice(wrap, '[data-name="method"]', (n, v) => { st.method = v; paintPane(); });
-        paintPane();
-      }
       window.scrollTo(0, 0);
     }
     function refreshTabCount() {
@@ -508,41 +549,15 @@
         return;
       }
       if (t.closest('[data-bill]')) { st.step = 'bill'; paint(); return; }
-      if (t.closest('[data-to-menu]')) { st.step = 'menu'; st.qrAt = 0; paint(); return; }
-      if (t.closest('[data-pay]')) {
+      if (t.closest('[data-to-menu]')) { st.step = 'menu'; paint(); return; }
+      const pm = t.closest('[data-method]');
+      if (pm) {
         if (!totals().count) return;
-        st.step = 'pay';
-        st.recv = '';
-        st.tipKeep = false;
-        st.qrAt = 0;
-        paint();
+        if (pm.dataset.method === 'cash') cashSheet();
+        else if (pm.dataset.method === 'promptpay') promptpaySheet();
+        else transferSheet();
         return;
       }
-      const key = t.closest('[data-key]');
-      if (key) {
-        const k = key.dataset.key;
-        if (k === 'del') st.recv = st.recv.slice(0, -1);
-        else if ((st.recv + k).replace(/^0+(?=\d)/, '').length <= 7) st.recv = (st.recv + k).replace(/^0+(?=\d)/, '');
-        root.querySelector('#cash-in').value = st.recv;
-        paintCash();
-        return;
-      }
-      const quick = t.closest('[data-quick]');
-      if (quick) {
-        st.recv = String(Number(quick.dataset.quick));
-        root.querySelector('#cash-in').value = st.recv;
-        paintCash();
-        return;
-      }
-      if (t.closest('[data-full]')) { openFull(); return; }
-      if (t.closest('[data-share-qr]')) {
-        try {
-          const cv = await LB.drawPayQr({ id: 'ขายหน้าร้าน', customer_name: st.name }, totals().total);
-          LB.shareCanvas(cv, 'qr-promptpay.png', 'QR PromptPay');
-        } catch (err) { LB.error(err); }
-        return;
-      }
-      if (t.closest('[data-close-bill]')) { closeBill(); return; }
       const dl = t.closest('[data-deliver]');
       if (dl) {
         const o = (st.orders || []).find((x) => x.id === dl.dataset.deliver);
@@ -569,8 +584,6 @@
         if (again) { again.focus(); again.setSelectionRange(pos, pos); }
       } else if (t.id === 'ps-name') st.name = t.value;
       else if (t.id === 'ps-disc') { st.disc = t.value; paintTotals(); }
-      else if (t.id === 'cash-in') { st.recv = t.value.replace(/[^\d.]/g, ''); paintCash(); }
-      else if (t.matches('[data-tip]')) { st.tipKeep = t.checked; paintCash(); }
     });
     root.addEventListener('change', (e) => {
       const t = e.target;
@@ -579,7 +592,7 @@
         setQty(line.dataset.line, Number(t.value));
         paintMenu();
         paintCart();
-      } else if (t.matches('[data-tip]')) { st.tipKeep = t.checked; paintCash(); }
+      }
     });
 
     paint();

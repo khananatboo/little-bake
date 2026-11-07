@@ -324,11 +324,25 @@ body.wide .app { max-width: none; }
   .pos-bar { display: none; }
 }
 
-/* รับเงิน */
-.pay { display: flex; flex-direction: column; gap: 16px; padding: 4px 16px 32px; }
-.pay-bill { gap: 8px; }
-.pay-panel { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-.pay-panel [data-close-bill] { position: sticky; bottom: 16px; z-index: 5; }
+/* ปุ่มรับเงินในบิล และแผ่นรับเงิน */
+.pay-due { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-top: 12px; border-top: 1px solid var(--line);
+  font-size: 16px; font-weight: 600; }
+.sheet-due { padding-top: 0; border-top: 0; }
+.pay-btns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.pay-btn { min-height: 72px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 8px 4px;
+  border: 1px solid var(--caramel); border-radius: var(--radius-md); background: var(--surface-raised); color: var(--ink);
+  font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.pay-btn svg { width: 24px; height: 24px; color: var(--caramel); }
+.pay-btn:active { background: var(--surface-sunk); }
+.pay-btn:disabled { border-color: var(--line); color: var(--ink-muted); cursor: not-allowed; }
+.pay-btn:disabled svg { color: var(--ink-muted); }
+.sheet-actions { position: sticky; bottom: 0; z-index: 2; margin: 0 -16px -16px; padding: 12px 16px 16px; background: var(--surface); border-top: 1px solid var(--line); }
+.sheet-actions .btn { min-height: 52px; }
+.pay-sheet .keypad-pos button { min-height: 48px; }
+.pay-sheet .cash-in { height: 56px; }
+.acct { display: flex; flex-direction: column; gap: 4px; }
+.acct-no { font-size: 22px; line-height: 28px; font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 0; overflow-wrap: anywhere; }
+@media (min-width: 600px) { .acct-no { font-size: 28px; line-height: 36px; } }
 .cash-in { height: 64px; font-family: var(--font-display); font-size: 34px; text-align: right; font-variant-numeric: tabular-nums; }
 .quick { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .quick .btn { padding: 0 8px; font-variant-numeric: tabular-nums; }
@@ -349,12 +363,6 @@ body.wide .app { max-width: none; }
 .alert-box { display: flex; gap: 8px; padding: 12px; border: 1px solid rgba(180, 35, 24, .45); border-radius: 12px; background: #fdf3f1; font-size: 14px; line-height: 20px; }
 .alert-box svg { color: var(--danger); margin-top: 1px; }
 .alert-box b { color: var(--danger); font-weight: 600; }
-@media (min-width: 600px) { .pay { padding-left: 24px; padding-right: 24px; } }
-@media (min-width: 900px) {
-  .pay { display: grid; grid-template-columns: 380px minmax(0, 1fr); align-items: start; gap: 24px; }
-  .pay-bill { position: sticky; top: 16px; }
-  .qr-pos canvas { width: 300px; height: 300px; }
-}
 
 /* QR เต็มจอสำหรับลูกค้า */
 .qr-full { position: fixed; inset: 0; z-index: 70; background: var(--surface); display: flex; align-items: center; justify-content: center;
